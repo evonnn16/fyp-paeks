@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>FYP</title>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="script.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="header_menu">
+    <h5 onclick='window.location = "/"'>PAEKS.Mail</h5>
+    <img src="image/user.png" alt="profile" width="30"  height="30" onclick="window.location.href = 'profile.html'">
+  </div>
+  
+  <div>
+    <h5>Compose</h5>
+    <!-- <form action="/create" method="post">
+      <button type="submit" value="Send Email">Send Email</button>
+    </form> -->
+    <button onclick='insert();'>Send Email</button>
+    
+  </div>
+  <table>
+    <tr>
+      <td>From</td>
+      <td><input type="text" id="from" name="from" readonly></td>
+    </tr>
+    <tr>
+      <td>To</td>
+      <td><input type="text" id="to" name="to"></td>
+    </tr>
+    <tr>
+      <td>Subject</td>
+      <td><input type="text" id="subject" name="subject"></td>
+    </tr>
+    <tr>
+      <td>Keyword</td>
+      <td><input type="text" id="keyword" name="keyword"></td>
+    </tr>
+  </table>
+  <textarea id="content" name="content" rows="10" cols="50">Enter content here</textarea>
+</body>
+</html>

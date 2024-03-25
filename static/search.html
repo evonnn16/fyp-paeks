@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>FYP</title>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="script.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="header_menu">
+    <h5 onclick='window.location = "/"'>PAEKS.Mail</h5>
+    <img src="image/user.png" alt="profile" width="30"  height="30" onclick="window.location.href = 'profile.html'">
+  </div>
+  
+  <div>
+    <input type="text" id="keyword" name="keyword" value="" size="50">
+    <img src="image/search.png" alt="search" width="30" height="30" onclick='search()'>
+  </div>
+  
+  <div>
+    <p id="no_result"></p>
+    <div id="result_list"></div>
+  </div>
+  
+</body>
+</html>

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>FYP</title>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js">
+  </script>
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="header_menu">
+    <h5 onclick='window.location = "/"'>PAEKS.Mail</h5>
+    <img src="static/image/user.png" alt="profile" width="30" height="30" onclick="window.location.href = '{{ url_for('static', filename='profile.html') }}';">
+  </div>
+  
+  <div class="container">
+    <div class="button_menu" onclick="window.location.href = '{{ url_for('static', filename='create.html') }}';">
+      <h4>Compose Email</h4>
+    </div>
+    <div class="button_menu" onclick="window.location.href = '{{ url_for('static', filename='search.html') }}';">
+      <h4>Search Email</h4>
+    </div>
+  </div>
+  
+</body>
+</html>
