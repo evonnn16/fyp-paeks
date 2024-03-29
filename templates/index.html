@@ -5,6 +5,7 @@
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js">
   </script>
   <script src="{{ url_for('static', filename='script.js') }}"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:slnt,wght@-10..0,100..900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -15,9 +16,11 @@
   
   <div class="dashboard_container">
     <div class="button_menu" onclick="window.location.href = '{{ url_for('static', filename='create.html') }}';">
+      <img src="static/image/mail.png" alt="compose">
       <h4>Compose Email</h4>
     </div>
     <div class="button_menu" onclick="window.location.href = '{{ url_for('static', filename='search.html') }}';">
+      <img src="static/image/search2.png" alt="search">
       <h4>Search Email</h4>
     </div>
   </div>

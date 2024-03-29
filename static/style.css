@@ -1,7 +1,7 @@
 * {
     margin: 0;
     padding: 0;
-    font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+    font-family: 'Inter', 'Open Sans', 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
 }
 
 body {
@@ -36,6 +36,14 @@ body {
     padding: 20px;
     text-align: center;
     margin: 10px;
+    height: 40vh;
+    width: 20vw;
+}
+
+.button_menu img {
+    height: 50%;
+    padding: 10px;
+    /* margin: auto; */
 }
 
 .profile_container {
@@ -57,6 +65,7 @@ body {
     flex-direction: column;
     align-items: center;
     min-height: 100vh;
+    background-color: #FAF8FF;
 }
 
 .login_container {
@@ -66,21 +75,46 @@ body {
     justify-content: center;
     padding: 50px;
     margin: auto;
-    border-radius: 15px;
-    box-shadow: 1px 1px 10px 5px #d6d6d6;
+    border-radius: 5px;
+    box-shadow: 1px 1px 10px 5px #e5e4e9;
+    background-color: white;
 }
 
 .login_container * {
     margin: 10px 0;
 }
 
+.login_container h1 {
+    /* color: #6551B3; */
+    font-size: 200%;
+    font-weight: 800;
+    margin-bottom: 30px;
+}
+
 .login_container p {
     align-self: flex-start;
-    margin: 5px 0;
+    margin-top: 10px;
+    margin-bottom: 1px;
+    font-size: 90%;
 }
 
 .login_container button {
+    padding: 10px;
+    width: 40%;
+    border-radius: 25px;
+    border-width: 0;
+    background-color: #6551B3;
+    color: white;
+}
+
+.login_container button:hover {
+    background-color: #AC9BEF;
+}
+
+.login_container input {
     padding: 5px;
-    width: 120px;
+    border-width: 1px;
+    border-color: #c4bed9;
+    background-color: #F0EEF6;
     border-radius: 10px;
 }

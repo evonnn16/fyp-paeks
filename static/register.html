@@ -4,19 +4,23 @@
   <title>FYP</title>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
   <script src="script.js"></script>
+  <link href='https://fonts.googleapis.com/css?family=Open Sans' rel='stylesheet'>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:slnt,wght@-10..0,100..900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
-  <div>
+<body class="login_body">
+  <div class="login_container">
     <h1>Register</h1>
     <p>Name</p>
-    <input type="text" id="username" name="username">
+    <input type="text" id="username" name="username" size="50">
     <p>Email Address</p>
-    <input type="text" id="email" name="email" placeholder="example@paeks.mail.com" size="30">
+    <input type="text" id="email" name="email" placeholder="example@paeks.mail.com" size="50">
     <p>Password</p>
-    <input type="password" id="pwd" name="pwd">
+    <input type="password" id="pwd" name="pwd" size="50">
     <p>Confirm Password</p>
-    <input type="password" id="pwd2" name="pwd2">
+    <input type="password" id="pwd2" name="pwd2" size="50">
 
     <button onclick='register()'>Create Account</button>
   </div>
