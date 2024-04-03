@@ -3,17 +3,9 @@ import os
 import json
 import firebase_admin
 from firebase_admin import credentials, db
-# import pyrebase
+# from Crypto.PublicKey import ECC
 
-# firebaseConfig = {
-#     "apiKey": "AIzaSyCXfaFMUm-f1GDWxEVKRNYOsBwOYlL9fXk",
-#     "authDomain": "fyp-paeks.firebaseapp.com",
-#     "projectId": "fyp-paeks",
-#     "databaseURL": "https://fyp-paeks-default-rtdb.asia-southeast1.firebasedatabase.app/",
-#     "storageBucket": "fyp-paeks.appspot.com",
-#     "messagingSenderId": "1052278906058",
-#     "appId": "1:1052278906058:web:9252241f81c8c668f16833"
-# }
+# mykey = ECC.generate(curve='p256')
 
 cred = credentials.Certificate("serviceAccountKey.json")
 firebase_admin.initialize_app(cred, {
