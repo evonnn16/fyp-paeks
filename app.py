@@ -3,6 +3,7 @@ import os
 import json
 import firebase_admin
 from firebase_admin import credentials, db
+# from charm.toolbox.ecgroup import ECGroup, ZR, G
 # from Crypto.PublicKey import ECC
 
 # mykey = ECC.generate(curve='p256')
