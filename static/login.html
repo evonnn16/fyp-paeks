@@ -4,16 +4,20 @@
   <title>FYP</title>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
   <script src="script.js"></script>
+  <link href='https://fonts.googleapis.com/css?family=Open Sans' rel='stylesheet'>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:slnt,wght@-10..0,100..900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
-  <div>
+<body class="login_body">
+  <div class="login_container">
     <h1>Login</h1>
     <p>Email Address</p>
-    <input type="text" id="email" name="email">
+    <input type="text" id="email" name="email" size="50">
     <p>Password</p>
-    <input type="password" id="pwd" name="pwd">
-
+    <input type="password" id="pwd" name="pwd" size="50">
+    <br><br>
     <button onclick='login()'>Login</button>
     <button onclick='window.location = "register.html"'>Register</button>
   </div>
