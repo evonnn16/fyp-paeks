@@ -3,9 +3,6 @@ import os
 import json
 import firebase_admin
 from firebase_admin import credentials, db
-# from Crypto.PublicKey import ECC
-
-# mykey = ECC.generate(curve='p256')
 
 cred = credentials.Certificate("serviceAccountKey.json")
 firebase_admin.initialize_app(cred, {

@@ -18,7 +18,7 @@ body {
     align-items: center; 
 }
 
-.header_menu > img {
+.header_menu img {
     margin-left: auto;
 }
 
@@ -37,13 +37,88 @@ body {
     text-align: center;
     margin: 10px;
     height: 40vh;
-    width: 20vw;
+    width: 40vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-radius: 5px;
+    box-shadow: 1px 1px 10px 5px #cfcdd5;
 }
 
 .button_menu img {
-    height: 50%;
+    height: 40%;
     padding: 10px;
-    /* margin: auto; */
+    margin: auto;
+    margin-bottom: 10px;
+}
+
+.button_menu h4 {
+    margin: auto;
+    font-size: 140%;
+    margin-top: 10px;
+}
+
+.compose_menu {
+    background-color: #F2EFFF;
+    padding: 10px 15px 10px 15px;
+    display: flex;
+    align-items: center;
+}
+
+.compose_menu button {
+    margin-left: auto;
+    padding: 10px;
+    border-radius: 5px;
+    border-width: 0;
+    background-color: #6551B3;
+    color: white;
+}
+
+.compose_menu button:hover {
+    background-color: #AC9BEF;
+    cursor: pointer;
+}
+
+/* .compose_form {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100vw;
+} */
+
+.compose_form td {
+    color: #5e5e5e;
+    font-size: 80%;
+    padding: 10px;
+    position: relative;
+}
+
+.compose_form input, #content {
+    border: none;
+    margin-left: 5px;
+    width: calc(100% - 100px);
+}
+
+.compose_form input:focus, #content:focus {
+    outline: none;
+}
+
+#content {
+    padding: 10px;
+    resize: none;
+    flex-grow: 1;
+    height: 100%;
+    width: calc(100% - 30px);
+}
+
+.compose_form hr {
+    border-top: 1px solid #dbdbdb;
+    margin-top: 0;
+    margin-bottom: 0;
+    position: absolute;
+    width: 100%;
+    bottom: 0;
+    left: 0;
 }
 
 .profile_container {
@@ -109,6 +184,7 @@ body {
 
 .login_container button:hover {
     background-color: #AC9BEF;
+    cursor: pointer;
 }
 
 .login_container input {
