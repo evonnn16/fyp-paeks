@@ -3,10 +3,22 @@ import os
 import json
 import firebase_admin
 from firebase_admin import credentials, db
-# from charm.toolbox.ecgroup import ECGroup, ZR, G
-# from Crypto.PublicKey import ECC
+# from charm.toolbox.ecgroup import ECGroup, ZR, G1, G2, GT
+# from charm.toolbox.eccurve import secp256k1
+# from charm.toolbox.hash_module import Hash
+# from charm.toolbox.pairinggroup import PairingGroup,ZR,G1,G2,GT,pair
+# import hashlib
 
-# mykey = ECC.generate(curve='p256')
+# hash1 = hashlib.sha256
+# hash2 = hashlib.sha256
+
+# def system_setup():
+#   group = PairingGroup('SS512')
+#   p = group.random()
+#   g1 = group.random(G1)
+#   g2 = group.random(G2)
+#   params = {'P': P, 'Group':group}
+#   return params
 
 cred = credentials.Certificate("serviceAccountKey.json")
 firebase_admin.initialize_app(cred, {
