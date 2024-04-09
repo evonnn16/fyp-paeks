@@ -3,22 +3,48 @@ import os
 import json
 import firebase_admin
 from firebase_admin import credentials, db
-# from charm.toolbox.ecgroup import ECGroup, ZR, G1, G2, GT
-# from charm.toolbox.eccurve import secp256k1
-# from charm.toolbox.hash_module import Hash
-# from charm.toolbox.pairinggroup import PairingGroup,ZR,G1,G2,GT,pair
-# import hashlib
+from charm.toolbox.pairinggroup import PairingGroup,ZR,G1,G2,pair
+import hashlib
 
-# hash1 = hashlib.sha256
-# hash2 = hashlib.sha256
+hash2 = hashlib.sha256
 
-# def system_setup():
-#   group = PairingGroup('SS512')
-#   p = group.random()
-#   g1 = group.random(G1)
-#   g2 = group.random(G2)
-#   params = {'P': P, 'Group':group}
-#   return params
+def setup():
+  #lamda = 'SS512' #symmetric pairing, G1=G2
+  #lamda = 'MNT224' #asymmetric pairing, G1!=G2
+  lamda = 'BN254' #asymmetric pairing, G1!=G2
+  group = PairingGroup(lamda)
+  #print(group) #constant
+
+  g1 = group.random(G1)
+  #print("g1:",g1)
+  g2 = group.random(G2)
+  #print("g2:",g2)
+  u = pair(g1, g2)
+  #print("u:",u)
+  params = {'g1':group.serialize(g1),'g2':group.serialize(g2),'u':group.serialize(u)}
+  return params
+
+def keygens(params):
+  group = PairingGroup('BN254')
+  y = group.random(ZR)
+  #print("y:",y)
+  sk_s = group.serialize(y) #convert object to byte
+  #print("sk_s:",group.deserialize(sk_s)) #convert byte to object
+  pk_s1 = group.serialize(group.deserialize(bytes(params['g1'], 'utf-8')) ** y) #in db store as str, convert to byte then deserialize
+  #print("pk_s1:",group.deserialize(pk_s1))
+  pk_s2 = group.serialize(group.deserialize(bytes(params['g2'], 'utf-8')) ** y)
+  #print("pk_s2:",group.deserialize(pk_s2))
+  return [sk_s,pk_s1,pk_s2]
+
+def keygenr(params):
+  group = PairingGroup('BN254')
+  x = group.random(ZR)
+  #print("x:",x)
+  sk_r = group.serialize(x)
+  #print("sk_r:",group.deserialize(sk_r))
+  pk_r = group.serialize(group.deserialize(bytes(params['g1'], 'utf-8')) ** x)
+  #print("pk_r:",group.deserialize(pk_r))
+  return [sk_r,pk_r]
 
 cred = credentials.Certificate("serviceAccountKey.json")
 firebase_admin.initialize_app(cred, {
@@ -122,11 +148,27 @@ def register():
         break
 
   if(same_email == "0"):
+    #setup global params if not yet in db, if existed proceed to keygen for both sender & receiver
+    params = db.reference('params/').get() 
+    if(params == None):
+      params = setup() 
+      db.reference('params/').set({'g1':params['g1'],'g2':params['g2'],'u':params['u']})
+      params = db.reference('params/').get()
+    
+    #print("params:",params)
+    [sk_s,pk_s1,pk_s2] = keygens(params)
+    [sk_r,pk_r] = keygenr(params)
+      
     user = users.child(id)
     user.set({
       'username': data[0]['username'],
       'email': data[0]['email'],
-      'pwd': data[0]['pwd']
+      'pwd': data[0]['pwd'],
+      'sk_s': sk_s,
+      'pk_s1': pk_s1,
+      'pk_s2': pk_s2,
+      'sk_r': sk_r,
+      'pk_r': pk_r
     })
     return "success"
   else:
