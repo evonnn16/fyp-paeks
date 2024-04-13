@@ -91,13 +91,22 @@ function insert(){
 };
 
 function search(){
+  keyword = document.getElementById('keyword').value;
+  uid = localStorage.getItem('uid');
+  
+  var data = [{
+    "keyword": keyword,
+    "uid": uid
+  }];
+
   $.ajax({
     headers: { 
       'Accept': 'application/json',
       'Content-Type': 'application/json' 
     },
-    type: "GET",
+    type: "POST",
     url: "/search",
+    data: JSON.stringify(data),
     success: function(result) {
       // console.log(result);
       // console.log(typeof result);
