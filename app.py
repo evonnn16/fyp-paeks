@@ -1,7 +1,5 @@
 from flask import Flask, render_template, request, jsonify
-import os
-import json
-import firebase_admin
+import os, json, uuid, firebase_admin
 from firebase_admin import credentials, db
 from charm.toolbox.pairinggroup import PairingGroup,ZR,G1,G2,pair
 import hashlib
@@ -94,81 +92,49 @@ def index():
 def register():
   data = request.get_json()
 
-  users = db.reference('users/')
-  user_list = users.get()
+  users = db.reference('users/').get()
+  if(users != None):
+    for u in users:
+      if(data[0]['email'] == users[u]["email"]):
+        return "email existed"
 
-  id = '-1'
-  if(user_list == None):
-    id = 'u0'
-  else:
-    id = 'u'+str(int(list(user_list.keys())[-1][1:])+1)
-
-  same_email = "0"
-  if(user_list != None):
-    for u in user_list:
-      if(data[0]['email'] == user_list[u]["email"]):
-        same_email = "1"
-        break
-
-  if(same_email == "0"):
-    #setup global params if not yet in db, if existed proceed to keygen for both sender & receiver
-    params = db.reference('params/').get() 
-    if(params == None):
-      params = setup() 
-      db.reference('params/').set({'g1':params['g1'],'g2':params['g2'],'u':params['u']})
-      params = db.reference('params/').get()
+  #setup global params if not yet in db, if existed proceed to keygen for both sender & receiver
+  params = db.reference('params/').get() 
+  if(params == None):
+    params = setup() 
+    db.reference('params/').set({'g1':params['g1'],'g2':params['g2'],'u':params['u']})
+    params = db.reference('params/').get()
     
-    #print("params:",params)
-    [sk_s,pk_s1,pk_s2] = keygens(params)
-    [sk_r,pk_r] = keygenr(params)
-      
-    user = users.child(id)
-    user.set({
-      'username': data[0]['username'],
-      'email': data[0]['email'],
-      'pwd': data[0]['pwd'],
-      'sk_s': sk_s,
-      'pk_s1': pk_s1,
-      'pk_s2': pk_s2,
-      'sk_r': sk_r,
-      'pk_r': pk_r
-    })
-    return "success"
-  else:
-    return "email existed"
+  #print("params:",params)
+  [sk_s,pk_s1,pk_s2] = keygens(params)
+  [sk_r,pk_r] = keygenr(params)
+  
+  db.reference('users/').child(str(uuid.uuid4())).set({
+    'username': data[0]['username'],
+    'email': data[0]['email'],
+    'pwd': data[0]['pwd'],
+    'sk_s': sk_s,
+    'pk_s1': pk_s1,
+    'pk_s2': pk_s2,
+    'sk_r': sk_r,
+    'pk_r': pk_r
+  })
+  return "success"
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
   data = request.get_json()
-
-  users = db.reference('users/')
-  user_list = users.get()
-
-  found = 0
-  for u in user_list:
-    # print(u,":",user_list[u]["email"])
-    if(data[0]['email'] == user_list[u]["email"] and data[0]['pwd'] == user_list[u]["pwd"]):
-      # print("match")
-      found = 1
-      break
-
-  if(found == 1): return "success"
-  else: return "fail"
+  users = db.reference('users/').get()
+  for u in users:
+    # print(u,":",users[u]["email"])
+    if(data[0]['email'] == users[u]["email"] and data[0]['pwd'] == users[u]["pwd"]):
+      return "success" #return u
+  return "0"
 
 @app.route('/create', methods=['GET', 'POST'])
 def insert():
   data = request.get_json()
-
-  emails = db.reference('emails/')
-  mail_list = emails.get()
-  # print(mail_list)
-  id = '-1'
-  if(mail_list == None):
-    id = 'e0'
-  else:
-    id = 'e'+str(int(list(mail_list.keys())[-1][1:])+1)
-    # get last item, slice e, convert int, +1, convert str+e
-
+  
   params = db.reference('params/').get() 
   
   users = db.reference('users/').get()
@@ -177,14 +143,13 @@ def insert():
       sk_s = users[u]["sk_s"]
     if(data[0]['to'] == users[u]["email"]):
       pk_r = users[u]["pk_r"]
-  print(data[0]['from'],"sk_s:",sk_s)
-  print(data[0]['to'],"pk_r:",pk_r)
+  #print(data[0]['from'],"sk_s:",sk_s)
+  #print(data[0]['to'],"pk_r:",pk_r)
   
   Cw = paeks(params, data[0]['keyword'], sk_s, pk_r)
-  print("create/Cw:",Cw)
+  #print("create/Cw:",Cw)
   
-  mail = emails.child(id)
-  mail.set({
+  db.reference('emails/').child(str(uuid.uuid4())).set({
     'from': data[0]['from'],
     'to': data[0]['to'],
     'subject': data[0]['subject'],
@@ -221,12 +186,9 @@ def search():
           Tw = trapdoor(params, data[0]['keyword'], pk_s1, pk_s2, sk_r)
           #print(f"trapdoor: {Tw}, keyword: {emails[e]['keyword']}")
           result = test(emails[e]["keyword"],Tw)
-          print(f"test result: {result}")
+          print(f"test result {e}: {result}")
   
   #print(received_mails)
-     
-  
-  
   
   emails = db.reference('emails/')
   mail_list = emails.get()

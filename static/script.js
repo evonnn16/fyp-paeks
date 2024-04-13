@@ -145,7 +145,9 @@ function register(){
   username = document.getElementById('username').value;
   email = document.getElementById('email').value;
   pwd = document.getElementById('pwd').value;
-  pwd2 = document.getElementById('pwd2').value;;
+  pwd2 = document.getElementById('pwd2').value;
+  
+  if(username=="" || pwd == "" || pwd2 == "" || email == "") return alert("Please fill in all inputs")
 
   if(pwd != pwd2)
     alert("Passwords not matched!")
@@ -170,6 +172,7 @@ function register(){
       data: JSON.stringify(data),
       success: function(result) {
         if(result == "success") window.location = "login.html";
+        else alert(result);
       } 
     })
   }
@@ -178,6 +181,11 @@ function register(){
 function login(){
   email = document.getElementById('email').value;
   pwd = document.getElementById('pwd').value;
+  
+  if(pwd == "" || email == "") return alert("Please fill in Email Address and Password")
+  if(!email.includes("@paeks.mail.com")){
+      email = email.split("@")[0]+"@paeks.mail.com";
+  }
 
   var data = [{
     "email": email,
@@ -194,11 +202,16 @@ function login(){
     url: "/login",
     data: JSON.stringify(data),
     success: function(result) {
-      console.log("server response:"+result);
+      //console.log("server response:"+result);
       if(result == "success"){
         localStorage.setItem('uid', email);
         window.location = "/";
       } 
+      if(result == "0") alert("fail login: account not found or password is wrong")
+      //else{
+      //  localStorage.setItem('uid', result);
+      //  window.location = "/";
+      //}
     } 
   })
 }
