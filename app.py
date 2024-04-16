@@ -73,8 +73,8 @@ def test(Cw, Tw):
   pairing = pair(group.deserialize(Tw),group.deserialize(bytes(Cw['B'], 'utf-8')))
   #print("temp pairing:",pairing)
   lhs = hash2(repr(pairing).encode()).hexdigest()
-  print("lhs:",lhs)
-  print("rhs:",Cw['A'])
+  #print("lhs:",lhs)
+  #print("rhs:",Cw['A'])
   return lhs == Cw['A']
 
 cred = credentials.Certificate("serviceAccountKey.json")
@@ -173,26 +173,29 @@ def search():
   #print(data[0]['uid'],"sk_r:",sk_r)
   
   emails = db.reference('emails/').get()
-  received_mails = []
-  for e in emails:
-    if(data[0]['uid'] == emails[e]["to"]):
-      received_mails.append(e)
+  received_mails = {}
+  if(emails != None):
+    for e in emails:
+      if(data[0]['uid'] == emails[e]["to"]):
+        #received_mails.append(e)
       
-      for u in users: #insert in db inlcude both uid&email or uid only 
-        if(emails[e]["from"] == users[u]["email"]):
-          pk_s1 = users[u]["pk_s1"]
-          pk_s2 = users[u]["pk_s2"]
-          #print(f"{e}: {users[u]['email']}: pk_s1: {pk_s1}, pk_s2: {pk_s2}")
-          Tw = trapdoor(params, data[0]['keyword'], pk_s1, pk_s2, sk_r)
-          #print(f"trapdoor: {Tw}, keyword: {emails[e]['keyword']}")
-          result = test(emails[e]["keyword"],Tw)
-          print(f"test result {e}: {result}")
+        for u in users: #insert in db inlcude both uid&email or uid only 
+          if(emails[e]["from"] == users[u]["email"]):
+            pk_s1 = users[u]["pk_s1"]
+            pk_s2 = users[u]["pk_s2"]
+            #print(f"{e}: {users[u]['email']}: pk_s1: {pk_s1}, pk_s2: {pk_s2}")
+            Tw = trapdoor(params, data[0]['keyword'], pk_s1, pk_s2, sk_r)
+            #print(f"trapdoor: {Tw}, keyword: {emails[e]['keyword']}")
+            result = test(emails[e]["keyword"],Tw)
+            #print(f"test result {e}: {result}")
+            if(result):
+              received_mails[e] = emails[e]
   
-  #print(received_mails)
+  print(received_mails)
   
   emails = db.reference('emails/')
   mail_list = emails.get()
-  return jsonify(mail_list)
+  return jsonify(received_mails)
 
 @app.route('/view', methods=['GET', 'POST'])
 def view():
