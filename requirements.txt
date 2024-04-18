@@ -1,5 +1,5 @@
 bcrypt==3.2.0
-Charm-Crypto==0.43
+Charm-Crypto @ git+https://github.com/JHUISI/charm@dev
 firebase_admin==6.5.0
 Flask==2.0.3
 gunicorn==22.0.0
