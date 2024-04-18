@@ -1,1 +1,1 @@
-web: gunicorn --bind :$PORT app:app
+web: sh setup.sh && gunicorn --bind :$PORT app:app
