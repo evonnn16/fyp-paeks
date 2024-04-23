@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 import os, json, uuid, firebase_admin
 from firebase_admin import credentials, db
-from charm.toolbox.pairinggroup import PairingGroup,ZR,G1,G2,pair
+#from charm.toolbox.pairinggroup import PairingGroup,ZR,G1,G2,pair
 import hashlib
 
 hash2 = hashlib.sha256
