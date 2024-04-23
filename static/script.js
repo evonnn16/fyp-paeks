@@ -63,6 +63,9 @@ function insert(){
   subject = document.getElementById('subject').value;
   keyword = document.getElementById('keyword').value;
   content = document.getElementById('content').value;
+  
+  if(from == "" || to == "" || subject == "" || keyword == "") return alert("Please fill in 'To', 'Subject' and 'Keyword'")
+  
   d = new Date();
   date = d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate()+" "+d.getHours()+":"+d.getMinutes()+":"+d.getSeconds();
 
@@ -85,7 +88,7 @@ function insert(){
     url: "/create",
     data: JSON.stringify(data),
     success: function(result) {
-      console.log("server response:"+result);
+      alert(result);
     } 
   })
 };

@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 import os, json, uuid, firebase_admin
 from firebase_admin import credentials, db
-#from charm.toolbox.pairinggroup import PairingGroup,ZR,G1,G2,pair
+from charm.toolbox.pairinggroup import PairingGroup,ZR,G1,G2,pair
 import hashlib
 
 hash2 = hashlib.sha256
@@ -146,6 +146,8 @@ def insert():
   #print(data[0]['from'],"sk_s:",sk_s)
   #print(data[0]['to'],"pk_r:",pk_r)
   
+  if(pk_r == None): return "Receiver's email address not found!"
+  
   Cw = paeks(params, data[0]['keyword'], sk_s, pk_r)
   #print("create/Cw:",Cw)
   
@@ -157,7 +159,7 @@ def insert():
     'content': data[0]['content'],
     'date': data[0]['date']
   })
-  return "Data Inserted"
+  return "Email is sent successfully!"
 
 @app.route('/search', methods=['GET', 'POST'])
 def search():
