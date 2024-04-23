@@ -65,6 +65,10 @@ body {
     align-items: center;
 }
 
+.compose_menu p {
+    font-weight: 500;
+}
+
 .compose_menu button {
     margin-left: auto;
     padding: 10px;
@@ -72,11 +76,17 @@ body {
     border-width: 0;
     background-color: #6551B3;
     color: white;
+    display: flex;
+    align-items: center;
 }
 
 .compose_menu button:hover {
     background-color: #AC9BEF;
     cursor: pointer;
+}
+
+.compose_menu button img {
+    margin-left: 10px;
 }
 
 /* .compose_form {
