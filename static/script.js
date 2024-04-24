@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('from').value = localStorage.getItem('uid');
   }
   else if(page == "search.html"){
-    
+    document.querySelector(".result_holder").style.display = "none";
   }
   else if(page == "view.html"){
     eid = localStorage.getItem('eid');
@@ -94,6 +94,7 @@ function insert(){
 };
 
 function search(){
+  document.querySelector(".result_holder").style.display = "block";
   keyword = document.getElementById('keyword').value;
   uid = localStorage.getItem('uid');
   
@@ -122,8 +123,8 @@ function search(){
       Object.keys(result).forEach(key1 => {
         const value1 = result[key1];
         // console.log(`Email Key: ${key1}`);
-        data += `<div id="`+key1+`" onclick='window.location = "view.html"; view("`+key1+`");'>
-          <img src="image/user.png" alt="user" width="30" height="30">
+        data += `<div class="result_row" id="`+key1+`" onclick='window.location = "view.html"; view("`+key1+`");'>
+          <img src="image/user.png" alt="user">
           <p id="from">`+value1.from+`</p>
           <p id="subject">`+value1.subject+`</p>
           <p id="date">`+value1.date+`</p>
