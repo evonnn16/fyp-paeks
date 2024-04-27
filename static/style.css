@@ -135,7 +135,7 @@ body {
     background-color: #FAF8FF;
 }
 
-.search_main {
+#search_main {
     width: 100vw;
     display: inline-grid;
     justify-self: center;

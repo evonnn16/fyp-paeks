@@ -128,7 +128,14 @@ def aes_encrypt(eid, data):
   }
   #print(f"{type(Cm)} : {Cm}")
   #print(f"{type(json.dumps(Cm))} : {json.dumps(Cm)}")
-  return key, Cm
+  return base64.b64encode(key), Cm
+
+def aes_decrypt(key, Cm):
+  c = AES.new(base64.b64decode(key), AES.MODE_GCM, nonce=base64.b64decode(Cm['nonce']))
+  c.update(base64.b64decode(Cm['header']))
+  m = c.decrypt_and_verify(base64.b64decode(Cm['ciphertext']), base64.b64decode(Cm['tag']))
+  #print("The message was: " + m.decode('utf-8'))
+  return json.loads(m.decode('utf-8'))
 
 cred = credentials.Certificate("serviceAccountKey.json")
 firebase_admin.initialize_app(cred, {
@@ -195,7 +202,7 @@ def insert():
     if(data[0]['from'] == users[u]["email"]):
       sk_s = users[u]["sk_s"]
       s = u
-      print(f"s:{s}")
+      #print(f"s:{s}")
     if(data[0]['to'] == users[u]["email"]):
       pk_r = users[u]["pk_r"]
   #print(data[0]['from'],"sk_s:",sk_s)
@@ -209,14 +216,7 @@ def insert():
   eid = str(uuid.uuid4())
   
   aes_key, Cm = aes_encrypt(eid, data)
-  print(f"{aes_key} and {Cm}")
-  
-  '''
-  c2 = AES.new(aes_key, AES.MODE_GCM, nonce=base64.b64decode(Cm['nonce']))
-  c2.update(base64.b64decode(Cm['header']))
-  m = c2.decrypt_and_verify(base64.b64decode(Cm['ciphertext']), base64.b64decode(Cm['tag']))
-  print("The message was: " + m.decode('utf-8'))
-  '''
+  #print(f"{aes_key} and {Cm}")
   
   '''db.reference('emails/').child(eid).set({
     'from': data[0]['from'],
@@ -226,12 +226,12 @@ def insert():
     'content': data[0]['content'],
     'date': data[0]['date']
   })'''
-  '''db.reference('emails/').child(eid).set({
+  db.reference('emails/').child(eid).set({
     'key': aes_key,
     'ciphertext': Cm,
     'keyword': Cw,
     'sender': s
-  })'''
+  })
   return "Email is sent successfully!"
 
 @app.route('/search', methods=['GET', 'POST'])
@@ -245,11 +245,24 @@ def search():
   for u in users:
     if(data[0]['uid'] == users[u]["email"]):
       sk_r = users[u]["sk_r"]
+      break
   #print(data[0]['uid'],"sk_r:",sk_r)
   
   emails = db.reference('emails/').get()
   received_mails = {}
   if(emails != None):
+    for e in emails:
+      pk_s1 = users[emails[e]["sender"]]["pk_s1"]
+      pk_s2 = users[emails[e]["sender"]]["pk_s2"]
+      #print(f"{e}: {users[emails[e]['sender']]['email']}: pk_s1: {pk_s1}, pk_s2: {pk_s2}")
+      Tw = trapdoor(params, data[0]['keyword'], pk_s1, pk_s2, sk_r)
+      #print(f"trapdoor: {Tw}, keyword: {emails[e]['keyword']}")
+      result = test(emails[e]["keyword"],Tw)
+      #print(f"test result {e}: {result}")
+      if(result):
+        received_mails[e] = aes_decrypt(emails[e]['key'], emails[e]['ciphertext'])
+    
+    '''
     for e in emails:
       if(data[0]['uid'] == emails[e]["to"]):
         #received_mails.append(e)
@@ -265,11 +278,14 @@ def search():
             #print(f"test result {e}: {result}")
             if(result):
               received_mails[e] = emails[e]
+              '''
   
-  print(received_mails)
+  print(f"search result:{received_mails}")
+  '''
+  for r in received_mails:
+    m = aes_decrypt(received_mails[r]['key'], received_mails[r]['ciphertext'])
+    print(m)'''
   
-  emails = db.reference('emails/')
-  mail_list = emails.get()
   return jsonify(received_mails)
 
 @app.route('/view', methods=['GET', 'POST'])

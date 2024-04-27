@@ -13,20 +13,33 @@
     <img src="image/user.png" alt="profile" width="30"  height="30" onclick="window.location.href = 'profile.html'">
   </div>
   
-  <div class="search_main">
-  <div class="search_holder">
-    <div class="search_bar">
-      <input type="text" id="keyword" name="keyword" value="">
-      <img src="image/search.png" alt="search" width="20" height="20" onclick='search()'>
+  <div id="search_main">
+    <div class="search_holder">
+      <div class="search_bar">
+        <input type="text" id="keyword" name="keyword" value="">
+        <img src="image/search.png" alt="search" width="20" height="20" onclick='search()'>
+      </div>
+    </div>
+  
+    <div class="result_holder">
+      <div class="search_result">
+        <p id="no_result"></p>
+        <div id="result_list"></div>
+      </div>
     </div>
   </div>
   
-  <div class="result_holder">
-    <div class="search_result">
-      <p id="no_result"></p>
-      <div id="result_list"></div>
+  <div id="view_container">
+    <img src="image/arrow.png" alt="Go Back" width="30" height="30"  onclick='goback()'>
+
+    <div>
+      <p id="vsubject"></p>
+      <img src="image/user.png" alt="user" width="30" height="30">
+      <p id="vusername"></p>
+      <p id="vfrom"></p>
+      <p id="vdate"></p>
+      <p id="vcontent"></p>
     </div>
-  </div>
   </div>
   
 </body>

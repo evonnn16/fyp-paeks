@@ -13,8 +13,9 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   else if(page == "search.html"){
     document.querySelector(".result_holder").style.display = "none";
+    document.getElementById("view_container").style.display = "none";
   }
-  else if(page == "view.html"){
+  /*else if(page == "view.html"){
     eid = localStorage.getItem('eid');
     
     $.ajax({
@@ -34,7 +35,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('content').innerHTML = result.content;
       } 
     })
-  }
+  }*/
   else if(page == "profile.html"){
     uid = localStorage.getItem('uid');
 
@@ -123,26 +124,40 @@ function search(){
       Object.keys(result).forEach(key1 => {
         const value1 = result[key1];
         // console.log(`Email Key: ${key1}`);
-        data += `<div class="result_row" id="`+key1+`" onclick='window.location = "view.html"; view("`+key1+`");'>
+        /*data += `<div class="result_row" id="`+key1+`" onclick='window.location = "view.html"; view("`+key1+`");'>
           <img src="image/user.png" alt="user">
           <p id="from">`+value1.from+`</p>
           <p id="subject">`+value1.subject+`</p>
           <p id="date">`+value1.date+`</p>
+          <p id="content" hidden>`+value1.content+`</p>
+        </div>`;*/
+        
+        data += `<div class="result_row" id="`+key1+`" onclick='view("`+key1+`");'>
+          <img src="image/user.png" alt="user">
+          <p id="from">`+value1.from+`</p>
+          <p id="subject">`+value1.subject+`</p>
+          <p id="date">`+value1.date+`</p>
+          <p id="content" hidden>`+value1.content+`</p>
         </div>`;
-
-        // Object.keys(value1).forEach(key2 => {
-        //   const value2 = value1[key2];
-        //   console.log(`Content Key: ${key2}, Value: ${value2}`);
-        // })
       });
       document.getElementById('result_list').innerHTML = data;
     } 
   })
 }
 
-function view(eid){
-  window.location = "view.html";
-  localStorage.setItem('eid', eid);
+function view(eid){  
+  document.getElementById('search_main').style.display = 'none';
+  document.getElementById('view_container').style.display = 'block';
+    
+  document.getElementById('vsubject').innerHTML = document.getElementById(eid).querySelector("#subject").innerHTML;
+  document.getElementById('vfrom').innerHTML = document.getElementById(eid).querySelector("#from").innerHTML;
+  document.getElementById('vdate').innerHTML = document.getElementById(eid).querySelector("#date").innerHTML;
+  document.getElementById('vcontent').innerHTML = document.getElementById(eid).querySelector("#content").innerHTML;
+}
+
+function goback(){
+  document.getElementById('search_main').style.display = 'inline-grid';
+  document.getElementById('view_container').style.display = 'none';
 }
 
 function register(){
