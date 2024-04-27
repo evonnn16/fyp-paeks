@@ -2,10 +2,36 @@ from flask import Flask, render_template, request, jsonify
 import os, json, uuid, firebase_admin
 from firebase_admin import credentials, db
 from charm.toolbox.pairinggroup import PairingGroup,ZR,G1,G2,pair
-import hashlib
+import hashlib, base64
+from Crypto.Cipher import AES
+from Crypto.Random import get_random_bytes
 
 hash2 = hashlib.sha256
+'''
+header = b"header"
+data = b"{a bunch of json object}"
+key = get_random_bytes(32)
+cipher = AES.new(key, AES.MODE_GCM)
+cipher.update(header)
+ciphertext, tag = cipher.encrypt_and_digest(data)
 
+json_k = [ 'nonce', 'header', 'ciphertext', 'tag' ]
+json_v = [ base64.b64encode(x).decode('utf-8') for x in (cipher.nonce, header, ciphertext, tag) ]
+result = json.dumps(dict(zip(json_k, json_v)))
+print(f"AES:{result}")
+
+try:
+    b64 = json.loads(result)
+    json_k = [ 'nonce', 'header', 'ciphertext', 'tag' ]
+    jv = {k:base64.b64decode(b64[k]) for k in json_k}
+
+    cipher = AES.new(key, AES.MODE_GCM, nonce=jv['nonce'])
+    cipher.update(jv['header'])
+    plaintext = cipher.decrypt_and_verify(jv['ciphertext'], jv['tag'])
+    print("The message was: " + plaintext.decode('utf-8'))
+except (ValueError, KeyError):
+    print("Incorrect decryption")
+'''
 def setup():
   #lamda = 'SS512' #symmetric pairing, G1=G2
   #lamda = 'MNT224' #asymmetric pairing, G1!=G2
@@ -77,6 +103,33 @@ def test(Cw, Tw):
   #print("rhs:",Cw['A'])
   return lhs == Cw['A']
 
+def aes_encrypt(eid, data):
+  header = eid.encode('UTF-8')
+  #print(header)
+  edata = json.dumps({
+    'from': data[0]['from'],
+    'to': data[0]['to'],
+    'subject': data[0]['subject'],
+    'content': data[0]['content'],
+    'date': data[0]['date']
+  }).encode('utf-8')
+  #print(edata)
+  
+  key = get_random_bytes(32)
+  c = AES.new(key, AES.MODE_GCM)
+  c.update(header)
+  ciphertext, tag = c.encrypt_and_digest(edata)
+  
+  Cm = {
+    'nonce': base64.b64encode(c.nonce).decode('utf-8'),
+    'header': base64.b64encode(header).decode('utf-8'),
+    'ciphertext': base64.b64encode(ciphertext).decode('utf-8'),
+    'tag': base64.b64encode(tag).decode('utf-8')
+  }
+  #print(f"{type(Cm)} : {Cm}")
+  #print(f"{type(json.dumps(Cm))} : {json.dumps(Cm)}")
+  return key, Cm
+
 cred = credentials.Certificate("serviceAccountKey.json")
 firebase_admin.initialize_app(cred, {
   "databaseURL": "https://fyp-paeks-default-rtdb.asia-southeast1.firebasedatabase.app/"
@@ -141,6 +194,8 @@ def insert():
   for u in users:
     if(data[0]['from'] == users[u]["email"]):
       sk_s = users[u]["sk_s"]
+      s = u
+      print(f"s:{s}")
     if(data[0]['to'] == users[u]["email"]):
       pk_r = users[u]["pk_r"]
   #print(data[0]['from'],"sk_s:",sk_s)
@@ -151,14 +206,32 @@ def insert():
   Cw = paeks(params, data[0]['keyword'], sk_s, pk_r)
   #print("create/Cw:",Cw)
   
-  db.reference('emails/').child(str(uuid.uuid4())).set({
+  eid = str(uuid.uuid4())
+  
+  aes_key, Cm = aes_encrypt(eid, data)
+  print(f"{aes_key} and {Cm}")
+  
+  '''
+  c2 = AES.new(aes_key, AES.MODE_GCM, nonce=base64.b64decode(Cm['nonce']))
+  c2.update(base64.b64decode(Cm['header']))
+  m = c2.decrypt_and_verify(base64.b64decode(Cm['ciphertext']), base64.b64decode(Cm['tag']))
+  print("The message was: " + m.decode('utf-8'))
+  '''
+  
+  '''db.reference('emails/').child(eid).set({
     'from': data[0]['from'],
     'to': data[0]['to'],
     'subject': data[0]['subject'],
     'keyword': Cw,
     'content': data[0]['content'],
     'date': data[0]['date']
-  })
+  })'''
+  '''db.reference('emails/').child(eid).set({
+    'key': aes_key,
+    'ciphertext': Cm,
+    'keyword': Cw,
+    'sender': s
+  })'''
   return "Email is sent successfully!"
 
 @app.route('/search', methods=['GET', 'POST'])
