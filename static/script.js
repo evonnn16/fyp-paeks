@@ -134,7 +134,8 @@ function search(){
         
         data += `<div class="result_row" id="`+key1+`" onclick='view("`+key1+`");'>
           <img src="image/user.png" alt="user">
-          <p id="from">`+value1.from+`</p>
+          <p id="username">`+value1.username+`</p>
+          <p id="from" hidden>`+value1.from+`</p>
           <p id="subject">`+value1.subject+`</p>
           <p id="date">`+value1.date+`</p>
           <p id="content" hidden>`+value1.content+`</p>
@@ -149,6 +150,7 @@ function view(eid){
   document.getElementById('search_main').style.display = 'none';
   document.getElementById('view_container').style.display = 'block';
     
+  document.getElementById('vusername').innerHTML = document.getElementById(eid).querySelector("#username").innerHTML;
   document.getElementById('vsubject').innerHTML = document.getElementById(eid).querySelector("#subject").innerHTML;
   document.getElementById('vfrom').innerHTML = document.getElementById(eid).querySelector("#from").innerHTML;
   document.getElementById('vdate').innerHTML = document.getElementById(eid).querySelector("#date").innerHTML;

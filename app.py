@@ -261,6 +261,7 @@ def search():
       #print(f"test result {e}: {result}")
       if(result):
         received_mails[e] = aes_decrypt(emails[e]['key'], emails[e]['ciphertext'])
+        received_mails[e]["username"] = [users[k]['username'] for k in users if users[k]['email'] == received_mails[e]["from"]][0]
     
     '''
     for e in emails:
@@ -280,11 +281,12 @@ def search():
               received_mails[e] = emails[e]
               '''
   
+  
+  #for r in received_mails:
+  #  print(received_mails[r]["from"],":", [users[k]['username'] for k in users if users[k]['email'] == received_mails[r]["from"]][0])
+  #  received_mails[r]["username"] = [users[k]['username'] for k in users if users[k]['email'] == received_mails[r]["from"]][0]
+    
   print(f"search result:{received_mails}")
-  '''
-  for r in received_mails:
-    m = aes_decrypt(received_mails[r]['key'], received_mails[r]['ciphertext'])
-    print(m)'''
   
   return jsonify(received_mails)
 

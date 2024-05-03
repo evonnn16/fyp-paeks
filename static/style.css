@@ -13,7 +13,7 @@ body {
 .header_menu {
     background-color: #6551B3;
     color: white;
-    padding: 10px;
+    padding: 10px 20px;
     display: flex;
     align-items: center; 
 }
@@ -200,8 +200,8 @@ body {
     height: 30px;
 }
 
-.result_row #from {
-    font-size: 10px;
+.result_row #username {
+    font-size: 75%;
     padding: 0 10px 0 10px;
     max-width: 100px;
     overflow: hidden;
@@ -217,6 +217,47 @@ body {
 .result_row #date {
     font-size: 10px;
     margin-left: auto;
+}
+
+.view_menu {
+    background-color: #F2EFFF;
+    padding: 10px 15px 10px 15px;
+    display: flex;
+    align-items: center;
+}
+
+.view_content {
+     padding: 15px;
+}
+
+.view_content #vsubject {
+    font-weight: 700;
+}
+
+.view_header {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #D6D6D6;
+    padding: 20px 0;
+}
+
+.view_header_user {
+    display: flex;
+    flex-direction: column;
+    margin: 0 10px;
+}
+
+.view_header_user #vfrom {
+    font-size: 65%;
+}
+
+.view_header #vdate {
+    margin-left: auto;
+    font-size: 75%;
+}
+
+.view_content #vcontent {
+    margin-top: 20px;
 }
 
 .profile_container {
