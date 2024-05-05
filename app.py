@@ -2,36 +2,13 @@ from flask import Flask, render_template, request, jsonify
 import os, json, uuid, firebase_admin
 from firebase_admin import credentials, db
 from charm.toolbox.pairinggroup import PairingGroup,ZR,G1,G2,pair
-import hashlib, base64
+import hashlib, base64, time
 from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
+from Crypto.Util.number import getPrime, getRandomRange
 
 hash2 = hashlib.sha256
-'''
-header = b"header"
-data = b"{a bunch of json object}"
-key = get_random_bytes(32)
-cipher = AES.new(key, AES.MODE_GCM)
-cipher.update(header)
-ciphertext, tag = cipher.encrypt_and_digest(data)
 
-json_k = [ 'nonce', 'header', 'ciphertext', 'tag' ]
-json_v = [ base64.b64encode(x).decode('utf-8') for x in (cipher.nonce, header, ciphertext, tag) ]
-result = json.dumps(dict(zip(json_k, json_v)))
-print(f"AES:{result}")
-
-try:
-    b64 = json.loads(result)
-    json_k = [ 'nonce', 'header', 'ciphertext', 'tag' ]
-    jv = {k:base64.b64decode(b64[k]) for k in json_k}
-
-    cipher = AES.new(key, AES.MODE_GCM, nonce=jv['nonce'])
-    cipher.update(jv['header'])
-    plaintext = cipher.decrypt_and_verify(jv['ciphertext'], jv['tag'])
-    print("The message was: " + plaintext.decode('utf-8'))
-except (ValueError, KeyError):
-    print("Incorrect decryption")
-'''
 def setup():
   #lamda = 'SS512' #symmetric pairing, G1=G2
   #lamda = 'MNT224' #asymmetric pairing, G1!=G2
@@ -137,6 +114,29 @@ def aes_decrypt(key, Cm):
   #print("The message was: " + m.decode('utf-8'))
   return json.loads(m.decode('utf-8'))
 
+def elgamal_keygen():
+  p = getPrime(2048)
+  print("p:",p,"-",p.bit_length(),"bits")
+  x = getRandomRange(1, p-2) #sk
+  #print("x:",x,"-",x.bit_length(),"bits")
+  g = getRandomRange(1, p-1) 
+  #print("g:",g,"-",g.bit_length(),"bits")
+  y = pow(g, x, p)
+  #print("y:",y,"-",y.bit_length(),"bits")
+  pk = {'p':base64.b64encode(str(p).encode()),'g':base64.b64encode(str(g).encode()),'y':base64.b64encode(str(y).encode())} # ElGamal.construct((p, g, y))
+  return {'p':base64.b64encode(str(p).encode()),'x':base64.b64encode(str(x).encode())}, pk
+
+def elgamal_encrypt(params, data):
+  group = PairingGroup('BN254')
+  p = 16283262548997601220198008118239886027035269286659395419233331082106632227801 #254-bit
+  g = int(str(group.deserialize(params['g1']))[1:-2].split(", ")[0])
+  
+  m = int.from_bytes(data.encode(), 'big')
+  k = int(str(group.random(ZR))) 
+  c1 = pow(ig, k, p)
+  c2 = m * pow(y, k, p) % p
+  ciphertext = (c1, c2)
+
 cred = credentials.Certificate("serviceAccountKey.json")
 firebase_admin.initialize_app(cred, {
   "databaseURL": "https://fyp-paeks-default-rtdb.asia-southeast1.firebasedatabase.app/"
@@ -169,6 +169,10 @@ def register():
   [sk_s,pk_s1,pk_s2] = keygens(params)
   [sk_r,pk_r] = keygenr(params)
   
+  #todo: setup prime and generator and store in params
+  eg_sk,eg_pk = elgamal_keygen()
+  #print(f"after: eg_sk:{base64.b64decode(eg_sk['p']).decode()}")
+  
   db.reference('users/').child(str(uuid.uuid4())).set({
     'username': data[0]['username'],
     'email': data[0]['email'],
@@ -177,7 +181,9 @@ def register():
     'pk_s1': pk_s1,
     'pk_s2': pk_s2,
     'sk_r': sk_r,
-    'pk_r': pk_r
+    'pk_r': pk_r,
+    'eg_sk': eg_sk,
+    'eg_pk': eg_pk
   })
   return "success"
 
@@ -218,14 +224,8 @@ def insert():
   aes_key, Cm = aes_encrypt(eid, data)
   #print(f"{aes_key} and {Cm}")
   
-  '''db.reference('emails/').child(eid).set({
-    'from': data[0]['from'],
-    'to': data[0]['to'],
-    'subject': data[0]['subject'],
-    'keyword': Cw,
-    'content': data[0]['content'],
-    'date': data[0]['date']
-  })'''
+  #Ck = elgamal_encrypt(params, aes_key, sk_s)
+  
   db.reference('emails/').child(eid).set({
     'key': aes_key,
     'ciphertext': Cm,
@@ -261,6 +261,7 @@ def search():
       #print(f"test result {e}: {result}")
       if(result):
         received_mails[e] = aes_decrypt(emails[e]['key'], emails[e]['ciphertext'])
+        received_mails[e]["username"] = [users[k]['username'] for k in users if users[k]['email'] == received_mails[e]["from"]][0]
     
     '''
     for e in emails:
@@ -280,11 +281,12 @@ def search():
               received_mails[e] = emails[e]
               '''
   
+  
+  #for r in received_mails:
+  #  print(received_mails[r]["from"],":", [users[k]['username'] for k in users if users[k]['email'] == received_mails[r]["from"]][0])
+  #  received_mails[r]["username"] = [users[k]['username'] for k in users if users[k]['email'] == received_mails[r]["from"]][0]
+    
   print(f"search result:{received_mails}")
-  '''
-  for r in received_mails:
-    m = aes_decrypt(received_mails[r]['key'], received_mails[r]['ciphertext'])
-    print(m)'''
   
   return jsonify(received_mails)
 

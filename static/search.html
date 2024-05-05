@@ -30,14 +30,19 @@
   </div>
   
   <div id="view_container">
-    <img src="image/arrow.png" alt="Go Back" width="30" height="30"  onclick='goback()'>
-
-    <div>
+    <div class="view_menu">
+      <img src="image/arrow.png" alt="Go Back" width="20" height="20" onclick='goback()'>
+    </div>
+    <div class="view_content">
       <p id="vsubject"></p>
-      <img src="image/user.png" alt="user" width="30" height="30">
-      <p id="vusername"></p>
-      <p id="vfrom"></p>
-      <p id="vdate"></p>
+      <div class="view_header">
+        <img src="image/user.png" alt="user" width="35" height="35">
+        <div class="view_header_user">
+          <p id="vusername"></p>
+          <p id="vfrom"></p>
+        </div>
+        <p id="vdate"></p>
+      </div>
       <p id="vcontent"></p>
     </div>
   </div>
