@@ -5,6 +5,7 @@ from charm.toolbox.pairinggroup import PairingGroup,ZR,G1,G2,pair
 import hashlib, base64, time
 from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
+from Crypto.Random.random import randrange
 from Crypto.Util.number import getPrime, getRandomRange
 
 hash2 = hashlib.sha256
@@ -117,14 +118,19 @@ def aes_decrypt(key, Cm):
 def elgamal_keygen():
   p = getPrime(2048)
   print("p:",p,"-",p.bit_length(),"bits")
-  x = getRandomRange(1, p-2) #sk
-  #print("x:",x,"-",x.bit_length(),"bits")
-  g = getRandomRange(1, p-1) 
-  #print("g:",g,"-",g.bit_length(),"bits")
+  #x = getRandomRange(1, p-2) #sk
+  x = randrange(1, p-2)
+  print("x:",x,"-",x.bit_length(),"bits")
+  #g = getRandomRange(1, p-1) 
+  g = randrange(1, p-1)
+  print("g:",g,"-",g.bit_length(),"bits")
   y = pow(g, x, p)
   #print("y:",y,"-",y.bit_length(),"bits")
-  pk = {'p':base64.b64encode(str(p).encode()),'g':base64.b64encode(str(g).encode()),'y':base64.b64encode(str(y).encode())} # ElGamal.construct((p, g, y))
-  return {'p':base64.b64encode(str(p).encode()),'x':base64.b64encode(str(x).encode())}, pk
+  #pk = {'p':base64.b64encode(str(p).encode()),'g':base64.b64encode(str(g).encode()),'y':base64.b64encode(str(y).encode())} # ElGamal.construct((p, g, y))
+  #return {'p':base64.b64encode(str(p).encode()),'x':base64.b64encode(str(x).encode())}, pk
+  pk = {'p':p,'g':g,'y':y}
+  #sk = {'p':p,'x':x}
+  return base64.b64encode(str(x).encode('utf-8')), base64.b64encode(json.dumps(pk).encode('utf-8'))
 
 def elgamal_encrypt(params, data):
   group = PairingGroup('BN254')
@@ -169,9 +175,9 @@ def register():
   [sk_s,pk_s1,pk_s2] = keygens(params)
   [sk_r,pk_r] = keygenr(params)
   
-  #todo: setup prime and generator and store in params
   eg_sk,eg_pk = elgamal_keygen()
   #print(f"after: eg_sk:{base64.b64decode(eg_sk['p']).decode()}")
+  #print(f"eg_sk:{eg_sk}\neg_pk:{eg_pk}\nafter:\neg_sk:{int(base64.b64decode(eg_sk).decode('utf-8'))}\neg_pk:{json.loads(base64.b64decode(eg_pk).decode('utf-8'))}")
   
   db.reference('users/').child(str(uuid.uuid4())).set({
     'username': data[0]['username'],
