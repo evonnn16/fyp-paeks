@@ -333,3 +333,21 @@ body {
     background-color: #F0EEF6;
     border-radius: 10px;
 }
+
+#loading {
+    /*background: url('image/loading.gif') no-repeat center center;*/
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: 100vw;
+    z-index: 9999999;
+    background-color: #00000075;
+    display: flex;
+    justify-content: center; 
+    align-items: center;
+}
+
+#loading img {
+    width: 100px;
+}

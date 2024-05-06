@@ -55,6 +55,9 @@ document.addEventListener('DOMContentLoaded', function() {
       } 
     })
   }
+  else if(page =="register.html"){
+    $('#loading').hide();
+  }
 })
 
 function insert(){
@@ -191,6 +194,12 @@ function register(){
       type: "POST",
       url: "/register",
       data: JSON.stringify(data),
+      beforeSend: function(){
+        $('#loading').show();
+      },
+      complete: function(){
+        $('#loading').hide();
+      },
       success: function(result) {
         if(result == "success") window.location = "login.html";
         else alert(result);
