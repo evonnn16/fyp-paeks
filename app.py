@@ -106,10 +106,10 @@ def aes_encrypt(eid, data):
   }
   #print(f"{type(Cm)} : {Cm}")
   #print(f"{type(json.dumps(Cm))} : {json.dumps(Cm)}")
-  return base64.b64encode(key), Cm
+  return key, Cm
 
 def aes_decrypt(key, Cm):
-  c = AES.new(base64.b64decode(key), AES.MODE_GCM, nonce=base64.b64decode(Cm['nonce']))
+  c = AES.new(key, AES.MODE_GCM, nonce=base64.b64decode(Cm['nonce']))
   c.update(base64.b64decode(Cm['header']))
   m = c.decrypt_and_verify(base64.b64decode(Cm['ciphertext']), base64.b64decode(Cm['tag']))
   #print("The message was: " + m.decode('utf-8'))
@@ -132,16 +132,22 @@ def elgamal_keygen():
   #sk = {'p':p,'x':x}
   return base64.b64encode(str(x).encode('utf-8')), base64.b64encode(json.dumps(pk).encode('utf-8'))
 
-def elgamal_encrypt(params, data):
-  group = PairingGroup('BN254')
-  p = 16283262548997601220198008118239886027035269286659395419233331082106632227801 #254-bit
-  g = int(str(group.deserialize(params['g1']))[1:-2].split(", ")[0])
-  
-  m = int.from_bytes(data.encode(), 'big')
-  k = int(str(group.random(ZR))) 
-  c1 = pow(ig, k, p)
-  c2 = m * pow(y, k, p) % p
-  ciphertext = (c1, c2)
+def elgamal_encrypt(msg, eg_pk):
+  pk = json.loads(base64.b64decode(eg_pk).decode('utf-8'))
+  m = int.from_bytes(msg, 'big')
+  k = randrange(1, int(pk['p'])-2)
+  #print("k:",k,"-",k.bit_length(),"bits")
+
+  c1 = pow(int(pk['g']), k, int(pk['p']))
+  c2 = m * pow(pk['y'], k, pk['p']) % pk['p']
+  #cm = (c1, c2)
+  return {'c1':str(c1), 'c2':str(c2)}
+
+def elgamal_decrypt(Ck, sk, pk):
+  p = int(json.loads(base64.b64decode(pk).decode('utf-8'))['p'])
+  m = int(Ck['c2']) * pow(int(Ck['c1']), p-1-int(base64.b64decode(sk).decode('utf-8')), p) % p
+  return m.to_bytes((m.bit_length() + 7) // 8, 'big')
+
 
 cred = credentials.Certificate("serviceAccountKey.json")
 firebase_admin.initialize_app(cred, {
@@ -217,6 +223,7 @@ def insert():
       #print(f"s:{s}")
     if(data[0]['to'] == users[u]["email"]):
       pk_r = users[u]["pk_r"]
+      eg_pk = users[u]["eg_pk"]
   #print(data[0]['from'],"sk_s:",sk_s)
   #print(data[0]['to'],"pk_r:",pk_r)
   
@@ -228,16 +235,18 @@ def insert():
   eid = str(uuid.uuid4())
   
   aes_key, Cm = aes_encrypt(eid, data)
-  #print(f"{aes_key} and {Cm}")
+  #print(f"aes key: {aes_key}")
   
-  #Ck = elgamal_encrypt(params, aes_key, sk_s)
+  Ck = elgamal_encrypt(aes_key, eg_pk)
+  #print(f"Ck:{Ck}")
   
   db.reference('emails/').child(eid).set({
-    'key': aes_key,
+    'key': Ck,
     'ciphertext': Cm,
     'keyword': Cw,
     'sender': s
   })
+  
   return "Email is sent successfully!"
 
 @app.route('/search', methods=['GET', 'POST'])
@@ -251,6 +260,8 @@ def search():
   for u in users:
     if(data[0]['uid'] == users[u]["email"]):
       sk_r = users[u]["sk_r"]
+      eg_sk = users[u]["eg_sk"]
+      eg_pk = users[u]["eg_pk"]
       break
   #print(data[0]['uid'],"sk_r:",sk_r)
   
@@ -266,31 +277,10 @@ def search():
       result = test(emails[e]["keyword"],Tw)
       #print(f"test result {e}: {result}")
       if(result):
-        received_mails[e] = aes_decrypt(emails[e]['key'], emails[e]['ciphertext'])
+        key = elgamal_decrypt(emails[e]['key'], eg_sk, eg_pk)
+        received_mails[e] = aes_decrypt(key, emails[e]['ciphertext'])
         received_mails[e]["username"] = [users[k]['username'] for k in users if users[k]['email'] == received_mails[e]["from"]][0]
-    
-    '''
-    for e in emails:
-      if(data[0]['uid'] == emails[e]["to"]):
-        #received_mails.append(e)
-      
-        for u in users: #insert in db inlcude both uid&email or uid only 
-          if(emails[e]["from"] == users[u]["email"]):
-            pk_s1 = users[u]["pk_s1"]
-            pk_s2 = users[u]["pk_s2"]
-            #print(f"{e}: {users[u]['email']}: pk_s1: {pk_s1}, pk_s2: {pk_s2}")
-            Tw = trapdoor(params, data[0]['keyword'], pk_s1, pk_s2, sk_r)
-            #print(f"trapdoor: {Tw}, keyword: {emails[e]['keyword']}")
-            result = test(emails[e]["keyword"],Tw)
-            #print(f"test result {e}: {result}")
-            if(result):
-              received_mails[e] = emails[e]
-              '''
   
-  
-  #for r in received_mails:
-  #  print(received_mails[r]["from"],":", [users[k]['username'] for k in users if users[k]['email'] == received_mails[r]["from"]][0])
-  #  received_mails[r]["username"] = [users[k]['username'] for k in users if users[k]['email'] == received_mails[r]["from"]][0]
     
   print(f"search result:{received_mails}")
   
