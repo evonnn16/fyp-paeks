@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, jsonify
 import os, json, uuid, firebase_admin
 from firebase_admin import credentials, db
 from charm.toolbox.pairinggroup import PairingGroup,ZR,G1,G2,pair
-import hashlib, base64, time
+import hashlib, base64, secrets, time
 from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
 from Crypto.Random.random import randrange
@@ -148,6 +148,14 @@ def elgamal_decrypt(Ck, sk, pk):
   m = int(Ck['c2']) * pow(int(Ck['c1']), p-1-int(base64.b64decode(sk).decode('utf-8')), p) % p
   return m.to_bytes((m.bit_length() + 7) // 8, 'big')
 
+def hashing_pwd(pwd):
+  salt = secrets.token_bytes(16)
+  h = hashlib.pbkdf2_hmac('sha256', pwd.encode('utf-8'), salt, 100000)
+  return base64.b64encode(salt), base64.b64encode(h)
+
+def verify_pwd(uhash, salt, pwd):
+  h = hashlib.pbkdf2_hmac('sha256', pwd.encode('utf-8'), base64.b64decode(salt), 100000)
+  return base64.b64decode(uhash) == h
 
 cred = credentials.Certificate("serviceAccountKey.json")
 firebase_admin.initialize_app(cred, {
@@ -185,17 +193,20 @@ def register():
   #print(f"after: eg_sk:{base64.b64decode(eg_sk['p']).decode()}")
   #print(f"eg_sk:{eg_sk}\neg_pk:{eg_pk}\nafter:\neg_sk:{int(base64.b64decode(eg_sk).decode('utf-8'))}\neg_pk:{json.loads(base64.b64decode(eg_pk).decode('utf-8'))}")
   
+  salt, pwd_hash = hashing_pwd(data[0]['pwd'])
+  
   db.reference('users/').child(str(uuid.uuid4())).set({
     'username': data[0]['username'],
     'email': data[0]['email'],
-    'pwd': data[0]['pwd'],
     'sk_s': sk_s,
     'pk_s1': pk_s1,
     'pk_s2': pk_s2,
     'sk_r': sk_r,
     'pk_r': pk_r,
     'eg_sk': eg_sk,
-    'eg_pk': eg_pk
+    'eg_pk': eg_pk,
+    'salt': salt,
+    'hash': pwd_hash
   })
   return "success"
 
@@ -203,10 +214,12 @@ def register():
 def login():
   data = request.get_json()
   users = db.reference('users/').get()
+  
   for u in users:
     # print(u,":",users[u]["email"])
-    if(data[0]['email'] == users[u]["email"] and data[0]['pwd'] == users[u]["pwd"]):
-      return "success" #return u
+    if(data[0]['email'] == users[u]["email"]):
+      if(verify_pwd(users[u]["hash"],users[u]["salt"],data[0]['pwd'])):
+        return "success" #return u
   return "0"
 
 @app.route('/create', methods=['GET', 'POST'])

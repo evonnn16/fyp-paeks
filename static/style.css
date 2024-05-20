@@ -272,8 +272,17 @@ body {
 .profile_container button {
     margin-top: auto;
     margin-bottom: 100px;
+    padding: 10px;
+    border-radius: 5px;
+    border-width: 0;
+    background-color: #6551B3;
+    color: white;
 }
 
+.profile_container button:hover {
+    background-color: #AC9BEF;
+    cursor: pointer;
+}
 .login_body {
     display: flex;
     flex-direction: column;
