@@ -225,6 +225,7 @@ def login():
 @app.route('/create', methods=['GET', 'POST'])
 def insert():
   data = request.get_json()
+  #print(data[0]['content'])
   
   params = db.reference('params/').get() 
   
@@ -242,8 +243,11 @@ def insert():
   
   if(pk_r == None): return "Receiver's email address not found!"
   
+  start_time = time.time()
   Cw = paeks(params, data[0]['keyword'], sk_s, pk_r)
   #print("create/Cw:",Cw)
+  end_time = time.time()
+  paeks_time = f"{end_time - start_time:.6f}"
   
   eid = str(uuid.uuid4())
   
@@ -259,6 +263,8 @@ def insert():
     'keyword': Cw,
     'sender': s
   })
+  
+  db.reference('performance/paeks/').child(eid).set(paeks_time)
   
   return "Email is sent successfully!"
 
@@ -285,27 +291,30 @@ def search():
       pk_s1 = users[emails[e]["sender"]]["pk_s1"]
       pk_s2 = users[emails[e]["sender"]]["pk_s2"]
       #print(f"{e}: {users[emails[e]['sender']]['email']}: pk_s1: {pk_s1}, pk_s2: {pk_s2}")
+      start_time = time.time()
       Tw = trapdoor(params, data[0]['keyword'], pk_s1, pk_s2, sk_r)
       #print(f"trapdoor: {Tw}, keyword: {emails[e]['keyword']}")
+      end_time = time.time()
+      trapdoor_time = f"{end_time - start_time:.6f}"
+      
+      start_time = time.time()
       result = test(emails[e]["keyword"],Tw)
       #print(f"test result {e}: {result}")
+      end_time = time.time()
+      test_time = f"{end_time - start_time:.6f}"
+      
       if(result):
         key = elgamal_decrypt(emails[e]['key'], eg_sk, eg_pk)
         received_mails[e] = aes_decrypt(key, emails[e]['ciphertext'])
         received_mails[e]["username"] = [users[k]['username'] for k in users if users[k]['email'] == received_mails[e]["from"]][0]
+        
+        db.reference('performance/trapdoor/').child(e).set(trapdoor_time)
+        db.reference('performance/test/').child(e).set(test_time)
   
     
   print(f"search result:{received_mails}")
   
   return jsonify(received_mails)
-
-@app.route('/view', methods=['GET', 'POST'])
-def view():
-  eid = request.get_json()
-  emails = db.reference('emails/')
-  mail_list = emails.get()
-  print(mail_list[eid])
-  return jsonify(mail_list[eid])
 
 @app.route('/profile', methods=['GET', 'POST'])
 def profile():
