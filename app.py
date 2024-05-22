@@ -7,6 +7,7 @@ from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
 from Crypto.Random.random import randrange
 from Crypto.Util.number import getPrime, getRandomRange
+import matplotlib.pyplot as plt
 
 hash2 = hashlib.sha256
 
@@ -230,6 +231,7 @@ def insert():
   params = db.reference('params/').get() 
   
   users = db.reference('users/').get()
+  pk_r = None
   for u in users:
     if(data[0]['from'] == users[u]["email"]):
       sk_s = users[u]["sk_s"]
@@ -247,7 +249,8 @@ def insert():
   Cw = paeks(params, data[0]['keyword'], sk_s, pk_r)
   #print("create/Cw:",Cw)
   end_time = time.time()
-  paeks_time = f"{end_time - start_time:.6f}"
+  paeks_time = end_time - start_time # f"{end_time - start_time:.6f}"
+  #print("paeks time taken:",paeks_time)
   
   eid = str(uuid.uuid4())
   
@@ -264,7 +267,15 @@ def insert():
     'sender': s
   })
   
-  db.reference('performance/paeks/').child(eid).set(paeks_time)
+  perf = db.reference('performance/time/paeks/')
+  if(perf.get() == None):
+    perf.set({"sum":paeks_time,"count":1})
+    #print("first time insert:",paeks_time)
+  else:
+    new_sum = perf.get()["sum"] + paeks_time
+    new_count = perf.get()["count"]+1
+    #print("existed:",new_sum, " count:", new_count)
+    perf.set({"sum":new_sum,"count":new_count})
   
   return "Email is sent successfully!"
 
@@ -291,25 +302,38 @@ def search():
       pk_s1 = users[emails[e]["sender"]]["pk_s1"]
       pk_s2 = users[emails[e]["sender"]]["pk_s2"]
       #print(f"{e}: {users[emails[e]['sender']]['email']}: pk_s1: {pk_s1}, pk_s2: {pk_s2}")
+      
       start_time = time.time()
       Tw = trapdoor(params, data[0]['keyword'], pk_s1, pk_s2, sk_r)
       #print(f"trapdoor: {Tw}, keyword: {emails[e]['keyword']}")
       end_time = time.time()
-      trapdoor_time = f"{end_time - start_time:.6f}"
+      trapdoor_time = end_time - start_time # f"{end_time - start_time:.6f}"
       
       start_time = time.time()
       result = test(emails[e]["keyword"],Tw)
       #print(f"test result {e}: {result}")
       end_time = time.time()
-      test_time = f"{end_time - start_time:.6f}"
+      test_time = end_time - start_time # f"{end_time - start_time:.6f}"
       
       if(result):
         key = elgamal_decrypt(emails[e]['key'], eg_sk, eg_pk)
         received_mails[e] = aes_decrypt(key, emails[e]['ciphertext'])
         received_mails[e]["username"] = [users[k]['username'] for k in users if users[k]['email'] == received_mails[e]["from"]][0]
         
-        db.reference('performance/trapdoor/').child(e).set(trapdoor_time)
-        db.reference('performance/test/').child(e).set(test_time)
+      print("trapdoor time taken:",trapdoor_time)
+      print("test time taken:",test_time)
+      perf = db.reference('performance/time/trapdoor/')
+      if(perf.get() == None):
+        perf.set({"sum":trapdoor_time,"count":1})
+        db.reference('performance/time/test/').set({"sum":test_time})
+        #print("first time insert:",trapdoor_time,test_time)
+      else:
+        new_trapdoor = perf.get()["sum"] + trapdoor_time
+        new_test = db.reference('performance/time/test/').get()["sum"] + test_time
+        new_count = perf.get()["count"]+1
+        #print("existed:",new_trapdoor,new_test, " count:", new_count)
+        perf.set({"sum":new_trapdoor,"count":new_count})
+        db.reference('performance/time/test/').set({"sum":new_test})
   
     
   print(f"search result:{received_mails}")
@@ -329,7 +353,17 @@ def profile():
 
   return jsonify(found)
 
+def graph():
+  plt.figure(num="PAEKS Performance Analysis")
+  plt.title("PAEKS Performance Analysis")
+  plt.ylabel("Average Time (ms)")
+  xpt = ["paeks","trapdoor","test"]
+  ypt = [10, 20, 30]
+  plt.bar(xpt,ypt)
+  plt.show()
+
 if __name__ == "__main__":
+  graph()
   app.run(host="127.0.0.1", port=int(os.environ.get('PORT', 8080)), debug=True)
 
 # @app.route("/test") 
