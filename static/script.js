@@ -9,36 +9,6 @@ document.addEventListener('DOMContentLoaded', function() {
       window.location = "static/login.html";
   }
   else if(page == "create.html"){
-    document.getElementById('from').value = localStorage.getItem('uid');
-  }
-  else if(page == "search.html"){
-    document.querySelector(".result_holder").style.display = "none";
-    document.getElementById("view_container").style.display = "none";
-  }
-  /*else if(page == "view.html"){
-    eid = localStorage.getItem('eid');
-    
-    $.ajax({
-      headers: { 
-        'Accept': 'application/json',
-        'Content-Type': 'application/json' 
-      },
-      type: "POST",
-      url: "/view",
-      data: JSON.stringify(eid),
-      success: function(result) {
-        // console.log("result:"+result);
-
-        document.getElementById('subject').innerHTML = result.subject;
-        document.getElementById('from').innerHTML = result.from;
-        document.getElementById('date').innerHTML = result.date;
-        document.getElementById('content').innerHTML = result.content;
-      } 
-    })
-  }*/
-  else if(page == "profile.html"){
-    uid = localStorage.getItem('uid');
-
     $.ajax({
       headers: { 
         'Accept': 'application/json',
@@ -46,13 +16,35 @@ document.addEventListener('DOMContentLoaded', function() {
       },
       type: "POST",
       url: "/profile",
-      data: JSON.stringify(uid),
+      data: JSON.stringify(localStorage.getItem('uid')),
       success: function(result) {
         // console.log("result:"+result);
-
-        document.getElementById('username').innerHTML = result.username;
-        document.getElementById('email').innerHTML = result.email;
-      } 
+	if(result.status === "success"){
+          document.getElementById('from').value = result.email;
+        }else alert("Error retrieving user email")
+      }
+    })
+  }
+  else if(page == "search.html"){
+    document.querySelector(".result_holder").style.display = "none";
+    document.getElementById("view_container").style.display = "none";
+  }
+  else if(page == "profile.html"){
+    $.ajax({
+      headers: { 
+        'Accept': 'application/json',
+        'Content-Type': 'application/json' 
+      },
+      type: "POST",
+      url: "/profile",
+      data: JSON.stringify(localStorage.getItem('uid')),
+      success: function(result) {
+        // console.log("result:"+result);
+	if(result.status === "success"){
+          document.getElementById('username').innerHTML = result.username;
+          document.getElementById('email').innerHTML = result.email;
+        }else alert("Error retrieving user profile")
+      }
     })
   }
   else if(page =="register.html"){
@@ -60,9 +52,8 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 })
 
-function insert(){
-  
-  from = document.getElementById('from').value;
+function insert(){  
+  from = localStorage.getItem('uid');
   to = document.getElementById('to').value;
   subject = document.getElementById('subject').value;
   keyword = document.getElementById('keyword').value;
@@ -126,14 +117,6 @@ function search(){
 
       Object.keys(result).forEach(key1 => {
         const value1 = result[key1];
-        // console.log(`Email Key: ${key1}`);
-        /*data += `<div class="result_row" id="`+key1+`" onclick='window.location = "view.html"; view("`+key1+`");'>
-          <img src="image/user.png" alt="user">
-          <p id="from">`+value1.from+`</p>
-          <p id="subject">`+value1.subject+`</p>
-          <p id="date">`+value1.date+`</p>
-          <p id="content" hidden>`+value1.content+`</p>
-        </div>`;*/
         
         data += `<div class="result_row" id="`+key1+`" onclick='view("`+key1+`");'>
           <img src="image/user.png" alt="user">
@@ -233,15 +216,15 @@ function login(){
     data: JSON.stringify(data),
     success: function(result) {
       //console.log("server response:"+result);
-      if(result == "success"){
-        localStorage.setItem('uid', email);
+      if(result.status === "success"){
+        localStorage.setItem('uid', result.uid);
         window.location = "/";
-      } 
-      if(result == "0") alert("fail login: account not found or password is wrong")
-      //else{
-      //  localStorage.setItem('uid', result);
-      //  window.location = "/";
-      //}
+      } else if (result.status === "error") {
+        alert("Fail login: " + result.msg);
+      } else {
+        console.error("Unexpected response:", result);
+        alert("Unexpected response from server. Please try again later.");
+      }
     } 
   })
 }
