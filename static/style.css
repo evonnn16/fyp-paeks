@@ -169,6 +169,10 @@ body {
     outline: none;
 }
 
+.search_bar img:hover {
+    cursor: pointer;
+}
+
 .result_holder {
     /*display: flex;*/
     justify-content: center;

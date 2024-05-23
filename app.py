@@ -57,7 +57,7 @@ def paeks(params, w, sk_s, pk_r):
   #print("A:",A)
   temp = group.deserialize(bytes(pk_r, 'utf-8'))**group.deserialize(bytes(sk_s, 'utf-8'))
   #print("temp:",temp)
-  v = group.hash((w,temp),ZR) #H1
+  v = group.hash((str(w),temp),ZR) #H1
   #print("v:",v)
   B = group.deserialize(bytes(params['g1'], 'utf-8'))**(v*r) * group.deserialize(bytes(pk_r, 'utf-8'))**r
   #print("B:",B)
@@ -67,7 +67,7 @@ def paeks(params, w, sk_s, pk_r):
 def trapdoor(params, w2, pk_s1, pk_s2, sk_r):
   group = PairingGroup('BN254')
   temp2 = group.deserialize(bytes(pk_s1, 'utf-8'))**group.deserialize(bytes(sk_r, 'utf-8'))
-  v2 = group.hash((w2,temp2),ZR) #H1
+  v2 = group.hash((str(w2),temp2),ZR) #H1
   #print("v':",v2)
   Tw = group.deserialize(bytes(pk_s2, 'utf-8'))**(1/(group.deserialize(bytes(sk_r, 'utf-8'))+v2))
   #print("Tw:",Tw)
@@ -233,15 +233,12 @@ def insert():
   users = db.reference('users/').get()
   
   s = data[0]['from']
+  data[0]['from'] = users[s]["email"]
   sk_s = users[s]["sk_s"]
   #print(f"s:{s}, sk_s:{sk_s}")
   
   pk_r = None
-  for u in users:
-    '''if(data[0]['from'] == users[u]["email"]):
-      sk_s = users[u]["sk_s"]
-      s = u'''
-      
+  for u in users:      
     if(data[0]['to'] == users[u]["email"]):
       pk_r = users[u]["pk_r"]
       eg_pk = users[u]["eg_pk"]
@@ -250,9 +247,13 @@ def insert():
   
   if(pk_r == None): return "Receiver's email address not found!"
   
+  keyword = data[0]['keyword'].split(' ')
+  keyword.sort()
+  #print(keyword)
+  
   start_time = time.time()
-  Cw = paeks(params, data[0]['keyword'], sk_s, pk_r)
-  #print("create/Cw:",Cw)
+  Cw = paeks(params, keyword, sk_s, pk_r)
+  #print("Cw:",Cw)
   end_time = time.time()
   paeks_time = end_time - start_time # f"{end_time - start_time:.6f}"
   #print("paeks time taken:",paeks_time)
@@ -300,6 +301,10 @@ def search():
   eg_sk = users[r]["eg_sk"]
   eg_pk = users[r]["eg_pk"]
   
+  keyword = data[0]['keyword'].split(' ')
+  keyword.sort()
+  #print(keyword)
+  
   emails = db.reference('emails/').child(r).get()
   received_mails = {}
   if(emails != None):
@@ -309,24 +314,25 @@ def search():
       #print(f"{s}: {users[s]['email']}: pk_s1: {pk_s1}, pk_s2: {pk_s2}")
       
       start_time = time.time()
-      Tw = trapdoor(params, data[0]['keyword'], pk_s1, pk_s2, sk_r)
+      Tw = trapdoor(params, keyword, pk_s1, pk_s2, sk_r)
       #print(f"trapdoor: {Tw}")
       end_time = time.time()
       trapdoor_time = end_time - start_time # f"{end_time - start_time:.6f}"
-      print("trapdoor time taken:",trapdoor_time)
+      #print("trapdoor time taken:",trapdoor_time)
       tw_size = sys.getsizeof(Tw)*8
       
       for e in emails[s]:
         start_time = time.time()
         result = test(emails[s][e]["keyword"],Tw)
-        print(f"test result {e}: {result}")
+        #print(f"test result {e}: {result}")
         end_time = time.time()
         test_time = end_time - start_time
-        print("test time taken:",test_time)
+        #print("test time taken:",test_time)
         
         if(result):
           key = elgamal_decrypt(emails[s][e]['key'], eg_sk, eg_pk)
           received_mails[e] = aes_decrypt(key, emails[s][e]['ciphertext'])
+          #print(received_mails[e])
           received_mails[e]["username"] = [users[k]['username'] for k in users if users[k]['email'] == received_mails[e]["from"]][0]
         
         perf = db.reference('performance/time/test/')
@@ -336,49 +342,11 @@ def search():
       perf = db.reference('performance/time/trapdoor/')
       if(perf.get() == None): perf.set({"sum":trapdoor_time,"count":1})
       else: perf.set({"sum":perf.get()["sum"] + trapdoor_time,"count":perf.get()["count"]+1})
-    
-    '''for e in emails:
-      pk_s1 = users[emails[e]["sender"]]["pk_s1"]
-      pk_s2 = users[emails[e]["sender"]]["pk_s2"]
-      #print(f"{e}: {users[emails[e]['sender']]['email']}: pk_s1: {pk_s1}, pk_s2: {pk_s2}")
       
-      start_time = time.time()
-      Tw = trapdoor(params, data[0]['keyword'], pk_s1, pk_s2, sk_r)
-      #print(f"trapdoor: {Tw}, keyword: {emails[e]['keyword']}")
-      end_time = time.time()
-      trapdoor_time = end_time - start_time # f"{end_time - start_time:.6f}"
-      tw_size = sys.getsizeof(Tw)*8
-      
-      start_time = time.time()
-      result = test(emails[e]["keyword"],Tw)
-      #print(f"test result {e}: {result}")
-      end_time = time.time()
-      test_time = end_time - start_time # f"{end_time - start_time:.6f}"
-      
-      if(result):
-        key = elgamal_decrypt(emails[e]['key'], eg_sk, eg_pk)
-        received_mails[e] = aes_decrypt(key, emails[e]['ciphertext'])
-        received_mails[e]["username"] = [users[k]['username'] for k in users if users[k]['email'] == received_mails[e]["from"]][0]
-        
-      print("trapdoor time taken:",trapdoor_time)
-      print("test time taken:",test_time)
-      perf = db.reference('performance/time/trapdoor/')
-      if(perf.get() == None):
-        perf.set({"sum":trapdoor_time,"count":1})
-        db.reference('performance/time/test/').set({"sum":test_time})
-        #print("first time insert:",trapdoor_time,test_time)
-      else:
-        #new_trapdoor = perf.get()["sum"] + trapdoor_time
-        #new_test = db.reference('performance/time/test/').get()["sum"] + test_time
-        #new_count = perf.get()["count"]+1
-        #print("existed:",new_trapdoor,new_test, " count:", new_count)
-        perf.set({"sum":perf.get()["sum"] + trapdoor_time,"count":perf.get()["count"]+1})
-        db.reference('performance/time/test/').set({"sum":db.reference('performance/time/test/').get()["sum"] + test_time})
-     
       perf = db.reference('performance/size/trapdoor/')
       if(perf.get() == None): perf.set({"sum":tw_size,"count":1})
       else: perf.set({"sum":perf.get()["sum"] + tw_size,"count":perf.get()["count"]+1})
-  '''
+  
   #print(f"search result:{received_mails}")
   
   return jsonify(received_mails)
@@ -389,25 +357,26 @@ def profile():
   u = db.reference('users/').child(uid).get()
   return {"status":"success","username":u["username"],"email":u["email"]}
 
-def graph():
-  data = db.reference('performance/time/').get()
-  
+def graph():  
   plt.figure(num="PAEKS Performance Analysis")
-  plt.title("Algorithms Average Execution Time")
-  plt.ylabel("Average Time (ms)")
+  
+  data = db.reference('performance/time/').get()
   xpt = ["PAEKS","Trapdoor","Test"]
   ypt = [data["paeks"]["sum"]/data["paeks"]["count"]*1000, data["trapdoor"]["sum"]/data["trapdoor"]["count"]*1000, data["test"]["sum"]/data["test"]["count"]*1000]
+  plt.title("Algorithms Average Execution Time")
+  plt.ylabel("Average Time (ms)")
   plt.bar(xpt,ypt)
   plt.show()
+  
+  '''data = db.reference('performance/size/').get()
+  xpt = ["Ciphertext","Trapdoor"]
+  ypt = [data["paeks"]["sum"]/data["paeks"]["count"], data["trapdoor"]["sum"]/data["trapdoor"]["count"]]
+  plt.bar(xpt,ypt)
+  plt.title("Average Communication Cost")
+  plt.ylabel("Size (bits)")
+  plt.show()'''
 
 if __name__ == "__main__":
-  #graph()
+  graph()
   app.run(host="127.0.0.1", port=int(os.environ.get('PORT', 8080)), debug=True)
 
-# @app.route("/test") 
-# app.run(host="127.0.0.1", port=8080, debug=True)
-# Running on http://127.0.0.1:8080/test http://localhost:8080/test
-
-# @app.route("/") 
-# app.run()
-# Running on http://localhost:5000/ http://localhost:8080/

@@ -52,102 +52,6 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 })
 
-function insert(){  
-  from = localStorage.getItem('uid');
-  to = document.getElementById('to').value;
-  subject = document.getElementById('subject').value;
-  keyword = document.getElementById('keyword').value;
-  content = document.getElementById('content').value;
-  
-  if(from == "" || to == "" || subject == "" || keyword == "") return alert("Please fill in 'To', 'Subject' and 'Keyword'")
-  
-  d = new Date();
-  date = d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate()+" "+d.getHours()+":"+d.getMinutes()+":"+d.getSeconds();
-
-  var data = [{
-    "from": from,
-    "to": to,
-    "subject": subject,
-    "keyword": keyword,
-    "content": content,
-    "date": date
-  }];
-  // console.log(data);
-
-  $.ajax({
-    headers: { 
-      'Accept': 'application/json',
-      'Content-Type': 'application/json' 
-    },
-    type: "POST",
-    url: "/create",
-    data: JSON.stringify(data),
-    success: function(result) {
-      alert(result);
-    } 
-  })
-};
-
-function search(){
-  document.querySelector(".result_holder").style.display = "block";
-  keyword = document.getElementById('keyword').value;
-  uid = localStorage.getItem('uid');
-  
-  var data = [{
-    "keyword": keyword,
-    "uid": uid
-  }];
-
-  $.ajax({
-    headers: { 
-      'Accept': 'application/json',
-      'Content-Type': 'application/json' 
-    },
-    type: "POST",
-    url: "/search",
-    data: JSON.stringify(data),
-    success: function(result) {
-      // console.log(result);
-      // console.log(typeof result);
-
-      var size = Object.keys(result).length;
-      document.getElementById('no_result').innerHTML = size+" searching results";
-
-      var data = "";
-
-      Object.keys(result).forEach(key1 => {
-        const value1 = result[key1];
-        
-        data += `<div class="result_row" id="`+key1+`" onclick='view("`+key1+`");'>
-          <img src="image/user.png" alt="user">
-          <p id="username">`+value1.username+`</p>
-          <p id="from" hidden>`+value1.from+`</p>
-          <p id="subject">`+value1.subject+`</p>
-          <p id="date">`+value1.date+`</p>
-          <p id="content" hidden>`+value1.content+`</p>
-        </div>`;
-      });
-      document.getElementById('result_list').innerHTML = data;
-    } 
-  })
-}
-
-function view(eid){  
-  document.getElementById('search_main').style.display = 'none';
-  document.getElementById('view_container').style.display = 'block';
-    
-  document.getElementById('vusername').innerHTML = document.getElementById(eid).querySelector("#username").innerHTML;
-  document.getElementById('vsubject').innerHTML = document.getElementById(eid).querySelector("#subject").innerHTML;
-  document.getElementById('vfrom').innerHTML = document.getElementById(eid).querySelector("#from").innerHTML;
-  document.getElementById('vdate').innerHTML = document.getElementById(eid).querySelector("#date").innerHTML;
-  document.getElementById('vcontent').innerHTML = document.getElementById(eid).querySelector("#content").innerHTML;
-}
-
-function goback(){
-  document.getElementById('search_main').style.display = 'inline-grid';
-  document.getElementById('view_container').style.display = 'none';
-}
-
 function register(){
   username = document.getElementById('username').value;
   email = document.getElementById('email').value;
@@ -233,3 +137,100 @@ function logout(){
   localStorage.setItem('uid', "");
   window.location = "login.html";
 }
+
+function insert(){  
+  from = localStorage.getItem('uid');
+  to = document.getElementById('to').value;
+  subject = document.getElementById('subject').value;
+  keyword = document.getElementById('keyword').value;
+  content = document.getElementById('content').value;
+  
+  if(from == "" || to == "" || subject == "" || keyword == "") return alert("Please fill in 'To', 'Subject' and 'Keyword'")
+  
+  d = new Date();
+  date = d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate()+" "+d.getHours()+":"+d.getMinutes()+":"+d.getSeconds();
+
+  var data = [{
+    "from": from,
+    "to": to,
+    "subject": subject,
+    "keyword": keyword,
+    "content": content,
+    "date": date
+  }];
+  // console.log(data);
+
+  $.ajax({
+    headers: { 
+      'Accept': 'application/json',
+      'Content-Type': 'application/json' 
+    },
+    type: "POST",
+    url: "/create",
+    data: JSON.stringify(data),
+    success: function(result) {
+      alert(result);
+    } 
+  })
+};
+
+function search(){
+  document.querySelector(".result_holder").style.display = "block";
+  keyword = document.getElementById('keyword').value;
+  uid = localStorage.getItem('uid');
+  
+  var data = [{
+    "keyword": keyword,
+    "uid": uid
+  }];
+
+  $.ajax({
+    headers: { 
+      'Accept': 'application/json',
+      'Content-Type': 'application/json' 
+    },
+    type: "POST",
+    url: "/search",
+    data: JSON.stringify(data),
+    success: function(result) {
+      // console.log(result);
+      // console.log(typeof result);
+
+      var size = Object.keys(result).length;
+      document.getElementById('no_result').innerHTML = size+" searching results";
+
+      var data = "";
+
+      Object.keys(result).forEach(key1 => {
+        const value1 = result[key1];
+        
+        data += `<div class="result_row" id="`+key1+`" onclick='view("`+key1+`");'>
+          <img src="image/user.png" alt="user">
+          <p id="username">`+value1.username+`</p>
+          <p id="from" hidden>`+value1.from+`</p>
+          <p id="subject">`+value1.subject+`</p>
+          <p id="date">`+value1.date+`</p>
+          <p id="content" hidden>`+value1.content.replace(/\n/g, '<br>')+`</p>
+        </div>`;
+      });
+      document.getElementById('result_list').innerHTML = data;
+    } 
+  })
+}
+
+function view(eid){  
+  document.getElementById('search_main').style.display = 'none';
+  document.getElementById('view_container').style.display = 'block';
+    
+  document.getElementById('vusername').innerHTML = document.getElementById(eid).querySelector("#username").innerHTML;
+  document.getElementById('vsubject').innerHTML = document.getElementById(eid).querySelector("#subject").innerHTML;
+  document.getElementById('vfrom').innerHTML = document.getElementById(eid).querySelector("#from").innerHTML;
+  document.getElementById('vdate').innerHTML = document.getElementById(eid).querySelector("#date").innerHTML;
+  document.getElementById('vcontent').innerHTML = document.getElementById(eid).querySelector("#content").innerHTML;
+}
+
+function goback(){
+  document.getElementById('search_main').style.display = 'inline-grid';
+  document.getElementById('view_container').style.display = 'none';
+}
+
