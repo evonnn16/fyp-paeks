@@ -11,72 +11,92 @@ import matplotlib.pyplot as plt
 
 hash2 = hashlib.sha256
 
-def setup():
+def setup(lamda):
   #lamda = 'SS512' #symmetric pairing, G1=G2
   #lamda = 'MNT224' #asymmetric pairing, G1!=G2
-  lamda = 'BN254' #asymmetric pairing, G1!=G2
+  #lamda = 'BN254' #asymmetric pairing, G1!=G2
   group = PairingGroup(lamda)
-  #print(group) #constant
 
-  g1 = group.random(G1)
-  #print("g1:",g1)
-  g2 = group.random(G2)
-  #print("g2:",g2)
-  u = pair(g1, g2)
-  #print("u:",u)
-  params = {'g1':group.serialize(g1),'g2':group.serialize(g2),'u':group.serialize(u)}
+  if(lamda == 'BN254'):
+    g1 = group.random(G1)
+    g2 = group.random(G2)
+    u = pair(g1, g2)
+    params = {'g1':group.serialize(g1),'g2':group.serialize(g2),'u':group.serialize(u)}
+  elif(lamda == 'SS512'):
+    g1 = group.random(G1)
+    u = pair(g1, g1)
+    params = {'g':str(group.serialize(g1)),'u':str(group.serialize(u))}
   return params
 
-def keygens(params):
-  group = PairingGroup('BN254')
+def keygens(lamda, params):
+  group = PairingGroup(lamda)
   y = group.random(ZR)
   #print("y:",y)
   sk_s = group.serialize(y) #convert object to byte
   #print("sk_s:",group.deserialize(sk_s)) #convert byte to object
-  pk_s1 = group.serialize(group.deserialize(bytes(params['g1'], 'utf-8')) ** y) #in db store as str, convert to byte then deserialize
-  #print("pk_s1:",group.deserialize(pk_s1))
-  pk_s2 = group.serialize(group.deserialize(bytes(params['g2'], 'utf-8')) ** y)
-  #print("pk_s2:",group.deserialize(pk_s2))
-  return [sk_s,pk_s1,pk_s2]
+  
+  if(lamda == 'BN254'):
+    pk_s1 = group.serialize(group.deserialize(bytes(params['g1'], 'utf-8')) ** y) #in db store as str, convert to byte then deserialize
+    #print("pk_s1:",group.deserialize(pk_s1))
+    pk_s2 = group.serialize(group.deserialize(bytes(params['g2'], 'utf-8')) ** y)
+    #print("pk_s2:",group.deserialize(pk_s2))
+    return [sk_s,pk_s1,pk_s2]
+  elif(lamda == 'SS512'):
+    pk_s = group.serialize(group.deserialize(bytes(params['g'], 'utf-8')) ** y)
+    return [str(sk_s),str(pk_s)]
 
-def keygenr(params):
-  group = PairingGroup('BN254')
+def keygenr(lamda, params):
+  group = PairingGroup(lamda)
   x = group.random(ZR)
   #print("x:",x)
   sk_r = group.serialize(x)
   #print("sk_r:",group.deserialize(sk_r))
-  pk_r = group.serialize(group.deserialize(bytes(params['g1'], 'utf-8')) ** x)
-  #print("pk_r:",group.deserialize(pk_r))
-  return [sk_r,pk_r]
+  
+  if(lamda == 'BN254'):
+    pk_r = group.serialize(group.deserialize(bytes(params['g1'], 'utf-8')) ** x)
+    #print("pk_r:",group.deserialize(pk_r))
+  elif(lamda == 'SS512'):
+    pk_r = group.serialize(group.deserialize(bytes(params['g'], 'utf-8')) ** x)
+  return [str(sk_r),str(pk_r)]
 
-def paeks(params, w, sk_s, pk_r):
-  group = PairingGroup('BN254')
+def paeks(lamda, params, w, sk_s, pk_r):
+  group = PairingGroup(lamda)
   r = group.random(ZR)
   #print("r:",r)
   A = hash2(repr((group.deserialize(bytes(params['u'], 'utf-8'))**group.deserialize(bytes(sk_s, 'utf-8')))**r).encode()).hexdigest()
   #print("A:",A)
   temp = group.deserialize(bytes(pk_r, 'utf-8'))**group.deserialize(bytes(sk_s, 'utf-8'))
   #print("temp:",temp)
-  v = group.hash((str(w),temp),ZR) #H1
+  v = group.hash((w,temp),ZR) #H1
   #print("v:",v)
-  B = group.deserialize(bytes(params['g1'], 'utf-8'))**(v*r) * group.deserialize(bytes(pk_r, 'utf-8'))**r
+  
+  if(lamda == 'BN254'):
+    B = group.deserialize(bytes(params['g1'], 'utf-8'))**(v*r) * group.deserialize(bytes(pk_r, 'utf-8'))**r
+  elif(lamda == 'SS512'):
+    B = group.deserialize(bytes(params['g'], 'utf-8'))**(v*r) * group.deserialize(bytes(pk_r, 'utf-8'))**r
   #print("B:",B)
   #print("Cw: A:",A," , B:",B)
-  return {'A':A, 'B':group.serialize(B)}
+  return {'A':str(A), 'B':str(group.serialize(B))}
   
-def trapdoor(params, w2, pk_s1, pk_s2, sk_r):
-  group = PairingGroup('BN254')
+def trapdoor(lamda, params, w2, pk_s1, pk_s2, sk_r):
+  group = PairingGroup(lamda)
+  
   temp2 = group.deserialize(bytes(pk_s1, 'utf-8'))**group.deserialize(bytes(sk_r, 'utf-8'))
-  v2 = group.hash((str(w2),temp2),ZR) #H1
+  v2 = group.hash((w2,temp2),ZR) #H1
   #print("v':",v2)
-  Tw = group.deserialize(bytes(pk_s2, 'utf-8'))**(1/(group.deserialize(bytes(sk_r, 'utf-8'))+v2))
-  #print("Tw:",Tw)
+  
+  if(lamda == 'BN254'):
+    Tw = group.deserialize(bytes(pk_s2, 'utf-8'))**(1/(group.deserialize(bytes(sk_r, 'utf-8'))+v2))
+    #print("Tw:",Tw)
+  elif(lamda == 'SS512'):
+    Tw = group.deserialize(bytes(pk_s1, 'utf-8'))**(1/(group.deserialize(bytes(sk_r, 'utf-8'))+v2))
   return group.serialize(Tw)
 
-def test(Cw, Tw):
-  group = PairingGroup('BN254')
-  pairing = pair(group.deserialize(Tw),group.deserialize(bytes(Cw['B'], 'utf-8')))
-  #print("temp pairing:",pairing)
+def test(lamda, Cw, Tw):
+  group = PairingGroup(lamda)
+  B = group.deserialize(bytes(Cw['B'], 'utf-8'))
+  print("test:",B)
+  pairing = pair(group.deserialize(Tw),B)
   lhs = hash2(repr(pairing).encode()).hexdigest()
   #print("lhs:",lhs)
   #print("rhs:",Cw['A'])
@@ -182,13 +202,13 @@ def register():
   #setup global params if not yet in db, if existed proceed to keygen for both sender & receiver
   params = db.reference('params/').get() 
   if(params == None):
-    params = setup() 
+    params = setup('BN254') 
     db.reference('params/').set({'g1':params['g1'],'g2':params['g2'],'u':params['u']})
     params = db.reference('params/').get()
     
   #print("params:",params)
-  [sk_s,pk_s1,pk_s2] = keygens(params)
-  [sk_r,pk_r] = keygenr(params)
+  [sk_s,pk_s1,pk_s2] = keygens('BN254',params)
+  [sk_r,pk_r] = keygenr('BN254',params)
   
   eg_sk,eg_pk = elgamal_keygen()
   #print(f"after: eg_sk:{base64.b64decode(eg_sk['p']).decode()}")
@@ -252,7 +272,7 @@ def insert():
   #print(keyword)
   
   start_time = time.time()
-  Cw = paeks(params, keyword, sk_s, pk_r)
+  Cw = paeks('BN254',params, str(keyword), sk_s, pk_r)
   #print("Cw:",Cw)
   end_time = time.time()
   paeks_time = end_time - start_time # f"{end_time - start_time:.6f}"
@@ -314,7 +334,7 @@ def search():
       #print(f"{s}: {users[s]['email']}: pk_s1: {pk_s1}, pk_s2: {pk_s2}")
       
       start_time = time.time()
-      Tw = trapdoor(params, keyword, pk_s1, pk_s2, sk_r)
+      Tw = trapdoor('BN254', params, str(keyword), pk_s1, pk_s2, sk_r)
       #print(f"trapdoor: {Tw}")
       end_time = time.time()
       trapdoor_time = end_time - start_time # f"{end_time - start_time:.6f}"
@@ -323,7 +343,7 @@ def search():
       
       for e in emails[s]:
         start_time = time.time()
-        result = test(emails[s][e]["keyword"],Tw)
+        result = test('BN254', emails[s][e]["keyword"],Tw)
         #print(f"test result {e}: {result}")
         end_time = time.time()
         test_time = end_time - start_time
@@ -357,6 +377,44 @@ def profile():
   u = db.reference('users/').child(uid).get()
   return {"status":"success","username":u["username"],"email":u["email"]}
 
+def type1_paeks():
+  print("Type 1 PAEKS running")
+  params = setup('SS512')
+  
+  [sk_s,pk_s] = keygens('SS512',params)
+  [sk_r,pk_r] = keygenr('SS512',params)
+  
+  keyword = "meeting"
+  
+  start_time = time.time()
+  Cw = paeks('SS512', params, keyword, sk_s, pk_r)
+  end_time = time.time()
+  paeks_time = (end_time - start_time) * 1000
+  cw_size = sys.getsizeof(Cw)*8
+  
+  print("params:",params)
+  print(f"sk_s:{sk_s}\npk_s:{pk_s}\nsk_r:{sk_r}\npk_r:{pk_r}")
+  print("Cw:",Cw)
+  print("paeks time taken:",paeks_time)
+  print("Cw size:",cw_size)
+  
+  skeyword = "meeting"
+  
+  start_time = time.time()
+  Tw = trapdoor('SS512', params, skeyword, pk_s, "", sk_r)
+  end_time = time.time()
+  print(f"trapdoor: {Tw}")
+  trapdoor_time = (end_time - start_time) * 1000
+  print("trapdoor time taken:",trapdoor_time)
+  tw_size = sys.getsizeof(Tw)*8
+  
+  start_time = time.time()
+  result = test('SS512', Cw, Tw)
+  end_time = time.time()
+  print(f"test result: {result}")
+  test_time = (end_time - start_time) * 1000
+  print("test time taken:",test_time)
+
 def graph():  
   plt.figure(num="PAEKS Performance Analysis")
   
@@ -377,6 +435,7 @@ def graph():
   plt.show()'''
 
 if __name__ == "__main__":
-  graph()
-  app.run(host="127.0.0.1", port=int(os.environ.get('PORT', 8080)), debug=True)
+  type1_paeks()
+  #graph()
+  #app.run(host="127.0.0.1", port=int(os.environ.get('PORT', 8080)), debug=True)
 
