@@ -8,99 +8,142 @@ from Crypto.Random import get_random_bytes
 from Crypto.Random.random import randrange
 from Crypto.Util.number import getPrime, getRandomRange
 import matplotlib.pyplot as plt
+import numpy as np 
 
 hash2 = hashlib.sha256
 
-def setup(lamda):
-  #lamda = 'SS512' #symmetric pairing, G1=G2
-  #lamda = 'MNT224' #asymmetric pairing, G1!=G2
-  #lamda = 'BN254' #asymmetric pairing, G1!=G2
-  group = PairingGroup(lamda)
+def setup(lamda, group):
+  #lamda = 'SS512' #symmetric pairing, G1=G2, 80-bits security
+  #lamda = 'SS1024' #symmetric pairing, G1=G2, 112-bits security
+  #lamda = 'BN254' #asymmetric pairing, G1!=G2, 128-bits security
+  #group = PairingGroup(lamda)
+  #print(f"curve:{lamda},group:{group}")
 
   if(lamda == 'BN254'):
     g1 = group.random(G1)
     g2 = group.random(G2)
     u = pair(g1, g2)
+    #print(f"g1:{g1}\ng2:{g2}\nu:{u}")
     params = {'g1':group.serialize(g1),'g2':group.serialize(g2),'u':group.serialize(u)}
-  elif(lamda == 'SS512'):
-    g1 = group.random(G1)
-    u = pair(g1, g1)
-    params = {'g':str(group.serialize(g1)),'u':str(group.serialize(u))}
+  elif(lamda == 'SS1024'):
+    g = group.random(G1)
+    u = pair(g, g)
+    #print(f"g:{g}\nu:{u}")
+    params = {'g':group.serialize(g),'u':group.serialize(u)}
   return params
 
-def keygens(lamda, params):
-  group = PairingGroup(lamda)
+def keygens(lamda, group, params):
+  #group = PairingGroup(lamda)
   y = group.random(ZR)
-  #print("y:",y)
+  #print("sk_s:",y)
   sk_s = group.serialize(y) #convert object to byte
   #print("sk_s:",group.deserialize(sk_s)) #convert byte to object
   
   if(lamda == 'BN254'):
+    #print(f"g1 byte:{params['g1']}\ng1 str:{params['g1'].decode('utf-8')}\ng1 pairing element:{group.deserialize(params['g1'])}\ng1 convert:{group.deserialize(bytes(params['g1'].decode('utf-8'), 'utf-8'))}")
     pk_s1 = group.serialize(group.deserialize(bytes(params['g1'], 'utf-8')) ** y) #in db store as str, convert to byte then deserialize
-    #print("pk_s1:",group.deserialize(pk_s1))
     pk_s2 = group.serialize(group.deserialize(bytes(params['g2'], 'utf-8')) ** y)
     #print("pk_s2:",group.deserialize(pk_s2))
     return [sk_s,pk_s1,pk_s2]
-  elif(lamda == 'SS512'):
+  elif(lamda == 'SS1024'):
     pk_s = group.serialize(group.deserialize(bytes(params['g'], 'utf-8')) ** y)
-    return [str(sk_s),str(pk_s)]
+    #print(f"pk_s:{group.deserialize(pk_s)}")
+    return [sk_s,pk_s]
 
-def keygenr(lamda, params):
-  group = PairingGroup(lamda)
+def keygenr(lamda, group, params):
+  #group = PairingGroup(lamda)
   x = group.random(ZR)
-  #print("x:",x)
+  #print("sk_r:",x)
   sk_r = group.serialize(x)
   #print("sk_r:",group.deserialize(sk_r))
   
   if(lamda == 'BN254'):
     pk_r = group.serialize(group.deserialize(bytes(params['g1'], 'utf-8')) ** x)
     #print("pk_r:",group.deserialize(pk_r))
-  elif(lamda == 'SS512'):
+  elif(lamda == 'SS1024'):
     pk_r = group.serialize(group.deserialize(bytes(params['g'], 'utf-8')) ** x)
-  return [str(sk_r),str(pk_r)]
+    #print("pk_r:",group.deserialize(pk_r))
+  return [sk_r,pk_r]
 
-def paeks(lamda, params, w, sk_s, pk_r):
+def paeks(lamda, group, params, w, sk_s, pk_r):
+  '''start_time = time.time()
   group = PairingGroup(lamda)
+  end_time = time.time()
+  print("1. time taken:",(end_time - start_time) * 1000)'''
+  
+  #start_time = time.time()
   r = group.random(ZR)
   #print("r:",r)
-  A = hash2(repr((group.deserialize(bytes(params['u'], 'utf-8'))**group.deserialize(bytes(sk_s, 'utf-8')))**r).encode()).hexdigest()
-  #print("A:",A)
+  #end_time = time.time()
+  #print("1. time taken:",(end_time - start_time) * 1000)
+  
+  #start_time = time.time()
+  temp = (group.deserialize(bytes(params['u'], 'utf-8'))**group.deserialize(bytes(sk_s, 'utf-8')))**r
+  #end_time = time.time()
+  #print("u^yr:",temp)
+  #print("2. time taken:",(end_time - start_time) * 1000)
+  
+  #start_time = time.time()
+  A = hash2(repr(temp).encode()).hexdigest()
+  #print("A:",type(A))
+  #end_time = time.time()
+  #print("2. time taken:",(end_time - start_time) * 1000)
+  
+  #start_time = time.time()
   temp = group.deserialize(bytes(pk_r, 'utf-8'))**group.deserialize(bytes(sk_s, 'utf-8'))
   #print("temp:",temp)
+  #end_time = time.time()
+  #print("3. time taken:",(end_time - start_time) * 1000)
+  
+  #start_time = time.time()
   v = group.hash((w,temp),ZR) #H1
   #print("v:",v)
+  #end_time = time.time()
+  #print("4. time taken:",(end_time - start_time) * 1000)  
   
+  #start_time = time.time()
   if(lamda == 'BN254'):
     B = group.deserialize(bytes(params['g1'], 'utf-8'))**(v*r) * group.deserialize(bytes(pk_r, 'utf-8'))**r
-  elif(lamda == 'SS512'):
+  elif(lamda == 'SS1024'):
     B = group.deserialize(bytes(params['g'], 'utf-8'))**(v*r) * group.deserialize(bytes(pk_r, 'utf-8'))**r
-  #print("B:",B)
-  #print("Cw: A:",A," , B:",B)
-  return {'A':str(A), 'B':str(group.serialize(B))}
+    #print("B:",B)
+    #print("Cw: A:",A," , B:",B)
+  #end_time = time.time()
+  #print("5. time taken:",(end_time - start_time) * 1000)  
+  return {'A':str(A), 'B':group.serialize(B)}
   
-def trapdoor(lamda, params, w2, pk_s1, pk_s2, sk_r):
-  group = PairingGroup(lamda)
-  
-  temp2 = group.deserialize(bytes(pk_s1, 'utf-8'))**group.deserialize(bytes(sk_r, 'utf-8'))
-  v2 = group.hash((w2,temp2),ZR) #H1
-  #print("v':",v2)
+def trapdoor(lamda, group, params, w2, pk_s1, pk_s2, sk_r):
+  #group = PairingGroup(lamda)
   
   if(lamda == 'BN254'):
+    temp2 = group.deserialize(bytes(pk_s1, 'utf-8'))**group.deserialize(bytes(sk_r, 'utf-8'))
+    v2 = group.hash((w2,temp2),ZR) #H1
+    #print("v':",v2)
     Tw = group.deserialize(bytes(pk_s2, 'utf-8'))**(1/(group.deserialize(bytes(sk_r, 'utf-8'))+v2))
+  elif(lamda == 'SS1024'):
+    #print(f"sk_r:{type(group.deserialize(sk_r))},{group.deserialize(sk_r)},pk_s:{type(group.deserialize(pk_s1))},{group.deserialize(pk_s1)}")
+    temp2 = group.deserialize(pk_s1)**group.deserialize(sk_r)
+    v2 = group.hash((w2,temp2),ZR) #H1
+    #print("v':",v2)
+    Tw = group.deserialize(pk_s1)**(1/(group.deserialize(sk_r)+v2))
     #print("Tw:",Tw)
-  elif(lamda == 'SS512'):
-    Tw = group.deserialize(bytes(pk_s1, 'utf-8'))**(1/(group.deserialize(bytes(sk_r, 'utf-8'))+v2))
   return group.serialize(Tw)
 
-def test(lamda, Cw, Tw):
-  group = PairingGroup(lamda)
-  B = group.deserialize(bytes(Cw['B'], 'utf-8'))
-  print("test:",B)
-  pairing = pair(group.deserialize(Tw),B)
-  lhs = hash2(repr(pairing).encode()).hexdigest()
-  #print("lhs:",lhs)
-  #print("rhs:",Cw['A'])
-  return lhs == Cw['A']
+def test(lamda, group, Cw, Tw):
+  try:
+    #group = PairingGroup(lamda)
+    
+    if(lamda == 'BN254'):
+      pairing = pair(group.deserialize(Tw),group.deserialize(bytes(Cw['B'], 'utf-8')))
+    elif(lamda == 'SS1024'):
+      pairing = pair(group.deserialize(Tw),group.deserialize(Cw['B']))
+    lhs = hash2(repr(pairing).encode()).hexdigest()
+    #print("lhs:",lhs)
+    #print("rhs:",Cw['A'])
+    return lhs == Cw['A']
+  except Exception as e:
+    print(f"Error in Test function: {e}")
+    return False
 
 def aes_encrypt(eid, data):
   header = eid.encode('UTF-8')
@@ -377,54 +420,114 @@ def profile():
   u = db.reference('users/').child(uid).get()
   return {"status":"success","username":u["username"],"email":u["email"]}
 
-def type1_paeks():
-  print("Type 1 PAEKS running")
-  params = setup('SS512')
+def perf_paeks(lamda):
+  print(f"\n{lamda} PAEKS running...")
+  group = PairingGroup(lamda)
   
-  [sk_s,pk_s] = keygens('SS512',params)
-  [sk_r,pk_r] = keygenr('SS512',params)
+  print("\nSetup...")
+  start_time = time.time()
+  params = setup(lamda, group)
+  end_time = time.time()
+  setup_time = (end_time - start_time) * 1000
+  #print("params:",params)
+  print("setup time taken:",setup_time)
+  
+  if(lamda == 'SS1024'):
+    params['g'] = params['g'].decode('utf-8')
+  elif(lamda == 'BN254'):
+    params['g1'] = params['g1'].decode('utf-8')
+    params['g2'] = params['g2'].decode('utf-8')  
+  params['u'] = params['u'].decode('utf-8')
+  
+  print("\nKeyGen...")
+  if(lamda == 'SS1024'):
+    start_time = time.time()
+    [sk_s,pk_s] = keygens(lamda, group, params)
+    end_time = time.time()
+  elif(lamda == 'BN254'):
+    start_time = time.time()
+    [sk_s,pk_s1,pk_s2] = keygens(lamda, group, params)
+    end_time = time.time()
+  keygens_time = (end_time - start_time) * 1000
+  print("keygens time taken:",keygens_time)
+  
+  start_time = time.time()
+  [sk_r,pk_r] = keygenr(lamda, group, params)
+  end_time = time.time()
+  keygenr_time = (end_time - start_time) * 1000
+  print("keygenr time taken:",keygenr_time)
+  
+  #print(f"sk_s:{sk_s}\npk_s:{pk_s}\nsk_r:{sk_r}\npk_r:{pk_r}")
+  #pk_size = sys.getsizeof(pk_r)*8
+  #print(f"pk size:{pk_size}")
   
   keyword = "meeting"
   
+  print("\nPAEKS...")
   start_time = time.time()
-  Cw = paeks('SS512', params, keyword, sk_s, pk_r)
+  Cw = paeks(lamda, group, params, keyword, sk_s.decode('utf-8'), pk_r.decode('utf-8'))
   end_time = time.time()
   paeks_time = (end_time - start_time) * 1000
   cw_size = sys.getsizeof(Cw)*8
   
-  print("params:",params)
-  print(f"sk_s:{sk_s}\npk_s:{pk_s}\nsk_r:{sk_r}\npk_r:{pk_r}")
-  print("Cw:",Cw)
+  #print("Cw:",Cw)
   print("paeks time taken:",paeks_time)
   print("Cw size:",cw_size)
   
+  if(lamda == 'BN254'):
+    Cw['B'] = Cw['B'].decode('utf-8')
+  
   skeyword = "meeting"
   
-  start_time = time.time()
-  Tw = trapdoor('SS512', params, skeyword, pk_s, "", sk_r)
-  end_time = time.time()
-  print(f"trapdoor: {Tw}")
+  print("\nTrapdoor...")
+  if(lamda == 'SS1024'):
+    start_time = time.time()
+    Tw = trapdoor(lamda, group, params, skeyword, pk_s, "", sk_r)
+    end_time = time.time()
+  elif(lamda == 'BN254'):
+    start_time = time.time()
+    Tw = trapdoor(lamda, group, params, skeyword, pk_s1.decode('utf-8'), pk_s2.decode('utf-8'), sk_r.decode('utf-8'))
+    end_time = time.time()
+  #print(f"trapdoor: {Tw}")
   trapdoor_time = (end_time - start_time) * 1000
   print("trapdoor time taken:",trapdoor_time)
   tw_size = sys.getsizeof(Tw)*8
+  print("Tw size:",tw_size)
   
+  print("\nTest...")
   start_time = time.time()
-  result = test('SS512', Cw, Tw)
+  result = test(lamda, group, Cw, Tw)
   end_time = time.time()
   print(f"test result: {result}")
   test_time = (end_time - start_time) * 1000
   print("test time taken:",test_time)
+  
+  '''xpt = ["Setup","KeyGenS","KeyGenR","PAEKS","Trapdoor","Test"]
+  ypt = [setup_time,keygens_time,keygenr_time,paeks_time,trapdoor_time,test_time]
+  plt.title("Algorithms Execution Time")
+  plt.ylabel("Time (ms)")
+  plt.bar(xpt,ypt)
+  plt.show()
+  
+  xpt = ["Public Key","Ciphertext","Trapdoor"]
+  ypt = [pk_size,cw_size,tw_size]
+  plt.bar(xpt,ypt)
+  plt.title("Communication Cost")
+  plt.ylabel("Size (bits)")
+  plt.show()'''
+  
+  return [setup_time,keygens_time,keygenr_time,paeks_time,trapdoor_time,test_time,paeks_time+trapdoor_time+test_time]
 
-def graph():  
+def graph(data1, data2):  
   plt.figure(num="PAEKS Performance Analysis")
   
-  data = db.reference('performance/time/').get()
+  '''data = db.reference('performance/time/').get()
   xpt = ["PAEKS","Trapdoor","Test"]
   ypt = [data["paeks"]["sum"]/data["paeks"]["count"]*1000, data["trapdoor"]["sum"]/data["trapdoor"]["count"]*1000, data["test"]["sum"]/data["test"]["count"]*1000]
   plt.title("Algorithms Average Execution Time")
   plt.ylabel("Average Time (ms)")
   plt.bar(xpt,ypt)
-  plt.show()
+  plt.show()'''
   
   '''data = db.reference('performance/size/').get()
   xpt = ["Ciphertext","Trapdoor"]
@@ -433,9 +536,20 @@ def graph():
   plt.title("Average Communication Cost")
   plt.ylabel("Size (bits)")
   plt.show()'''
+  
+  x = ["Setup","KeyGenS","KeyGenR","PAEKS","Trapdoor","Test","Total"]
+  xaxis = np.arange(len(x))
+  plt.bar(xaxis - 0.2, data1, 0.4, label = 'Type 1')
+  plt.bar(xaxis + 0.2, data2, 0.4, label = 'Type 3')
+  plt.xticks(xaxis, x)
+  plt.ylabel("Time (ms)")
+  plt.title("Algorithms Execution Time")
+  plt.legend()
+  plt.show()
 
 if __name__ == "__main__":
-  type1_paeks()
-  #graph()
+  type1 = perf_paeks('SS1024')
+  type3 = perf_paeks('BN254')
+  graph(type1, type3)
   #app.run(host="127.0.0.1", port=int(os.environ.get('PORT', 8080)), debug=True)
 
