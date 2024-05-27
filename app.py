@@ -9,6 +9,7 @@ from Crypto.Random.random import randrange
 from Crypto.Util.number import getPrime, getRandomRange
 import matplotlib.pyplot as plt
 import numpy as np 
+from datetime import datetime
 
 hash2 = hashlib.sha256
 
@@ -235,23 +236,25 @@ def index():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
   data = request.get_json()
+  
+  group = PairingGroup('BN254')
 
   users = db.reference('users/').get()
   if(users != None):
     for u in users:
       if(data[0]['email'] == users[u]["email"]):
-        return "email existed"
+        return {"status":"fail","msg":"Email address existed"}
 
   #setup global params if not yet in db, if existed proceed to keygen for both sender & receiver
   params = db.reference('params/').get() 
   if(params == None):
-    params = setup('BN254') 
+    params = setup('BN254', group) 
     db.reference('params/').set({'g1':params['g1'],'g2':params['g2'],'u':params['u']})
     params = db.reference('params/').get()
     
   #print("params:",params)
-  [sk_s,pk_s1,pk_s2] = keygens('BN254',params)
-  [sk_r,pk_r] = keygenr('BN254',params)
+  [sk_s,pk_s1,pk_s2] = keygens('BN254', group, params)
+  [sk_r,pk_r] = keygenr('BN254', group, params)
   
   eg_sk,eg_pk = elgamal_keygen()
   #print(f"after: eg_sk:{base64.b64decode(eg_sk['p']).decode()}")
@@ -272,7 +275,7 @@ def register():
     'salt': salt,
     'hash': pwd_hash
   })
-  return "success"
+  return {"status":"success","msg":"Account successfully created"}
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -284,13 +287,14 @@ def login():
     if(data[0]['email'] == users[u]["email"]):
       if(verify_pwd(users[u]["hash"],users[u]["salt"],data[0]['pwd'])):
         return {"status": "success", "uid": u}
-  return {"status": "error", "msg": "account not found or password is wrong"}
+  return {"status": "fail", "msg": "Account is not found or password is wrong"}
 
 @app.route('/create', methods=['GET', 'POST'])
 def insert():
   data = request.get_json()
-  #print(data[0]['content'])
+  #print(data[0]['date'])
   
+  group = PairingGroup('BN254')
   params = db.reference('params/').get() 
   
   users = db.reference('users/').get()
@@ -308,14 +312,14 @@ def insert():
       r = u
   #print(data[0]['to'],"pk_r:",pk_r)
   
-  if(pk_r == None): return "Receiver's email address not found!"
+  if(pk_r == None): return {"status":"fail","msg":"Receiver's email address not found"}
   
   keyword = data[0]['keyword'].split(' ')
   keyword.sort()
   #print(keyword)
   
   start_time = time.time()
-  Cw = paeks('BN254',params, str(keyword), sk_s, pk_r)
+  Cw = paeks('BN254', group, params, str(keyword), sk_s, pk_r)
   #print("Cw:",Cw)
   end_time = time.time()
   paeks_time = end_time - start_time # f"{end_time - start_time:.6f}"
@@ -350,12 +354,13 @@ def insert():
   else:
     perf.set({"sum":perf.get()["sum"] + cw_size,"count":perf.get()["count"]+1})
   
-  return "Email is sent successfully!"
+  return {"status": "success", "msg":"Email is sent successfully!"}
 
 @app.route('/search', methods=['GET', 'POST'])
 def search():
   data = request.get_json()
   
+  group = PairingGroup('BN254')
   params = db.reference('params/').get() 
   
   users = db.reference('users/').get()
@@ -377,7 +382,7 @@ def search():
       #print(f"{s}: {users[s]['email']}: pk_s1: {pk_s1}, pk_s2: {pk_s2}")
       
       start_time = time.time()
-      Tw = trapdoor('BN254', params, str(keyword), pk_s1, pk_s2, sk_r)
+      Tw = trapdoor('BN254', group, params, str(keyword), pk_s1, pk_s2, sk_r)
       #print(f"trapdoor: {Tw}")
       end_time = time.time()
       trapdoor_time = end_time - start_time # f"{end_time - start_time:.6f}"
@@ -386,7 +391,7 @@ def search():
       
       for e in emails[s]:
         start_time = time.time()
-        result = test('BN254', emails[s][e]["keyword"],Tw)
+        result = test('BN254', group, emails[s][e]["keyword"],Tw)
         #print(f"test result {e}: {result}")
         end_time = time.time()
         test_time = end_time - start_time
@@ -410,9 +415,11 @@ def search():
       if(perf.get() == None): perf.set({"sum":tw_size,"count":1})
       else: perf.set({"sum":perf.get()["sum"] + tw_size,"count":perf.get()["count"]+1})
   
-  #print(f"search result:{received_mails}")
+  print(f"search result:{received_mails}")
+  #sorted_emails = dict(sorted(received_mails.items(), key=lambda item: datetime.strptime(item[1]['date'], '%Y-%m-%d %H:%M:%S'), reverse=True))
+  #print(f"search result:{sorted_emails}")
   
-  return jsonify(received_mails)
+  return received_mails
 
 @app.route('/profile', methods=['GET', 'POST'])
 def profile():
@@ -548,8 +555,8 @@ def graph(data1, data2):
   plt.show()
 
 if __name__ == "__main__":
-  type1 = perf_paeks('SS1024')
-  type3 = perf_paeks('BN254')
-  graph(type1, type3)
-  #app.run(host="127.0.0.1", port=int(os.environ.get('PORT', 8080)), debug=True)
+  #type1 = perf_paeks('SS1024')
+  #type3 = perf_paeks('BN254')
+  #graph(type1, type3)
+  app.run(host="127.0.0.1", port=int(os.environ.get('PORT', 8080)), debug=True)
 

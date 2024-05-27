@@ -58,10 +58,10 @@ function register(){
   pwd = document.getElementById('pwd').value;
   pwd2 = document.getElementById('pwd2').value;
   
-  if(username=="" || pwd == "" || pwd2 == "" || email == "") return alert("Please fill in all inputs")
+  if(username=="" || pwd == "" || pwd2 == "" || email == "") return alert("Please fill in all information")
 
   if(pwd != pwd2)
-    alert("Passwords not matched!")
+    alert("Passwords are not matched")
   else{
     if(!email.includes("@paeks.mail.com")){
       email = email.split("@")[0]+"@paeks.mail.com";
@@ -88,8 +88,14 @@ function register(){
         $('#loading').hide();
       },
       success: function(result) {
-        if(result == "success") window.location = "login.html";
-        else alert(result);
+        if(result.status === "success"){
+          window.location = "static/login.html";
+        } else if (result.status === "fail") {
+          alert("Fail registration: " + result.msg);
+        } else {
+          console.error("Unexpected response:", result);
+          alert("Unexpected response from server. Please try again later.");
+        }
       } 
     })
   }
@@ -123,7 +129,7 @@ function login(){
       if(result.status === "success"){
         localStorage.setItem('uid', result.uid);
         window.location = "/";
-      } else if (result.status === "error") {
+      } else if (result.status === "fail") {
         alert("Fail login: " + result.msg);
       } else {
         console.error("Unexpected response:", result);
@@ -148,7 +154,7 @@ function insert(){
   if(from == "" || to == "" || subject == "" || keyword == "") return alert("Please fill in 'To', 'Subject' and 'Keyword'")
   
   d = new Date();
-  date = d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate()+" "+d.getHours()+":"+d.getMinutes()+":"+d.getSeconds();
+  date = d.getFullYear()+"-"+(d.getMonth()+1).toString().padStart(2, '0')+"-"+d.getDate().toString().padStart(2, '0')+" "+d.getHours().toString().padStart(2, '0')+":"+d.getMinutes().toString().padStart(2, '0')+":"+d.getSeconds().toString().padStart(2, '0');
 
   var data = [{
     "from": from,
@@ -169,7 +175,15 @@ function insert(){
     url: "/create",
     data: JSON.stringify(data),
     success: function(result) {
-      alert(result);
+      if(result.status === "success"){
+        alert(result.msg);
+        window.location = "/";
+      } else if (result.status === "fail") {
+        alert("Fail sending: " + result.msg);
+      } else {
+        console.error("Unexpected response:", result);
+        alert("Unexpected response from server. Please try again later.");
+      }
     } 
   })
 };
@@ -192,9 +206,16 @@ function search(){
     type: "POST",
     url: "/search",
     data: JSON.stringify(data),
-    success: function(result) {
-      // console.log(result);
-      // console.log(typeof result);
+    success: function(result) {      
+      let entries = Object.entries(result);      
+      entries.sort((a, b) => {
+        const dateA = new Date(a[1].date);
+        const dateB = new Date(b[1].date);
+        return dateB - dateA; // descending order
+      });
+      //console.log(entries); //[[eid,obj],[eid,obj]]      
+      result = Object.fromEntries(entries);
+      //console.log(result);
 
       var size = Object.keys(result).length;
       document.getElementById('no_result').innerHTML = size+" searching results";
