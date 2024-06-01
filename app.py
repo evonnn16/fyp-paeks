@@ -326,6 +326,13 @@ def verify_pwd(uhash, salt, pwd):
   h = hashlib.pbkdf2_hmac('sha256', pwd.encode('utf-8'), base64.b64decode(salt), 100000)
   return base64.b64decode(uhash) == h
 
+def calc_size(data, data_type):
+  if data_type == 'Cm':
+    return len(base64.b64decode(data['nonce']))*8 + len(base64.b64decode(data['header']))*8 + len(base64.b64decode(data['tag']))*8 + len(base64.b64decode(data['ciphertext']))*8
+  elif data_type == 'g':    
+    bsize = [int(i) for i in re.findall(r'\d+', str(data))]
+    return sum(len(bin(i))-2 for i in bsize)
+
 @app.route("/") 
 def index():
   return render_template('index.html')
@@ -401,11 +408,11 @@ def insert():
   #print(keyword)
   
   Cw, paeks_time = paeks.encrypt(str(keyword))
-  print("Cw:",Cw)
-  bsize = [int(i) for i in str(Cw['B'])[1:-1].split(", ")]
-  print(f"Cw size: {sum(len(bin(i))-2 for i in bsize)+len(Cw['A'])*4} bits")
+  #print("Cw:",Cw)
+  cw_size = calc_size(Cw['B'], 'g') + len(Cw['A'])*4
   Cw['B'] = paeks.paekstobyte(Cw['B'])
   print("paeks time taken:",paeks_time)
+  print(f"Cw size: {cw_size} bits")
   
   eid = str(uuid.uuid4())
   
@@ -413,14 +420,18 @@ def insert():
   Cm, aes_enc_time = aes_enc(paeks.paekstobyte(aes_key)[:32], eid, data)
   #print(f"aes key: {aes_key}")
   #print(f"aes encrypt: {Cm}")
-  print(f"\naes enc time: {aes_enc_time}")
+  print(f"aes enc time: {aes_enc_time} ms")
+  cm_size = calc_size(Cm, 'Cm')
+  print(f"Cm size: {cm_size} bits")
   
   eg_pk = {'g': paeks.g1, 'y': paeks.pk_r}
   Ck, elgamal_enc_time = elgamal_enc(paeks.group, aes_key, eg_pk)
+  #print(f"Ck: {Ck}")
+  ck_size = calc_size(Ck['c1'], 'g') + calc_size(Ck['c2'], 'g')
   Ck['c1'] = paeks.paekstobyte(Ck['c1'])
   Ck['c2'] = paeks.paekstobyte(Ck['c2'])
-  #print(f"Ck: {Ck}")
-  print(f"\nelgamal enc time: {elgamal_enc_time}")
+  print(f"elgamal enc time: {elgamal_enc_time}")
+  print(f"Ck size: {ck_size} bits")
   
   db.reference('emails/').child(r).child(s).child(eid).set({
     'key': Ck,
@@ -468,11 +479,10 @@ def search():
       #print(f"{users[s]['username']}: pk_s1: {paeks.pk_s1}, pk_s2: {paeks.pk_s2}")
       
       Tw, trapdoor_time = paeks.trapdoor(str(keyword))
-      print(f"trapdoor: {Tw}")
+      #print(f"trapdoor: {Tw}")
       print("trapdoor time taken:",trapdoor_time)
-      bsize = [int(i) for i in re.findall(r'\d+', str(Tw))]
-      print(f"Tw size: {sum(len(bin(i))-2 for i in bsize)} bits")
-      #tw_size = sys.getsizeof(Tw)*8
+      tw_size = calc_size(Tw, 'g')
+      print(f"Tw size: {tw_size} bits")
       
       for e in emails[s]:
         emails[s][e]["keyword"]['B'] = paeks.strtopaeks(emails[s][e]["keyword"]['B'])
@@ -528,115 +538,83 @@ def perf_paeks(pairing_type, lamda):
   #print(f"params u: {paeks.u}")
   
   if(pairing_type == 'type1'):    
-    eg_pk['g'] = paeks.paekstobyte(paeks.g)
-    #params['g'] = params['g'].decode('utf-8')
+    eg_pk['g'] = paeks.g
     #print(f"params g: {paeks.g}")
   elif(pairing_type == 'type3'):    
-    eg_pk['g'] = paeks.paekstobyte(paeks.g1)
-    #params['g1'] = params['g1'].decode('utf-8')
-    #params['g2'] = params['g2'].decode('utf-8')
+    eg_pk['g'] = paeks.g1
     #print(f"params g1: {paeks.g1}")
     #print(f"params g2: {paeks.g2}")
-  #params['u'] = params['u'].decode('utf-8')  
   
   #print("\nKeyGen...")
   result, keygens_time = paeks.keygens()
-  '''start_time = time.time()
-  paeks.keygens()
-  end_time = time.time()
-  keygens_time = (end_time - start_time) * 1000'''
   
-  if(pairing_type == 'type1'):
-    '''start_time = time.time()
-    [sk_s,pk_s] = keygens(pairing_type, group, params)
-    end_time = time.time()'''    
-    #print(f"sk_s: {paeks.sk_s}\npk_s: {paeks.pk_s}")
-  elif(pairing_type == 'type3'):
-    '''start_time = time.time()
-    [sk_s,pk_s1,pk_s2] = keygens(pairing_type, group, params)
-    end_time = time.time()'''    
-    #print(f"sk_s: {paeks.sk_s}\npk_s1: {paeks.pk_s1}\npk_s2: {paeks.pk_s2}")
+  if(pairing_type == 'type1'): 
+    print(f"sk_s: {paeks.sk_s}\npk_s: {paeks.pk_s}")
+    pks_size = calc_size(str(paeks.pk_s), 'g')
+    #print(f"pk_s size: {pk_size}")
+  elif(pairing_type == 'type3'): 
+    print(f"sk_s: {paeks.sk_s}\npk_s1: {paeks.pk_s1}\npk_s2: {paeks.pk_s2}")
+    pks_size = calc_size(str(paeks.pk_s1), 'g') + calc_size(str(paeks.pk_s2), 'g')
+    #print(f"pk_s size: {pk_size}")
   
   result, keygenr_time = paeks.keygenr()
-  '''start_time = time.time()
-  paeks.keygenr()
-  #[sk_r,pk_r] = keygenr(pairing_type, group, params)
-  end_time = time.time()
-  keygenr_time = (end_time - start_time) * 1000  '''
   print(f"sk_r: {paeks.sk_r}\npk_r: {paeks.pk_r}")
+  pkr_size = calc_size(str(paeks.pk_r), 'g')  
+  sk_size = len(bin(int(str(paeks.sk_r))))
   
-  eg_sk = paeks.paekstobyte(paeks.sk_r)
-  eg_pk['y'] = paeks.paekstobyte(paeks.pk_r)
-  #print(f"sk_r: {group.deserialize(sk_r)}")
+  eg_pk['y'] = paeks.pk_r
   
-  sk_size = len(eg_sk)*8
-  pk_size = len(eg_pk)*8
-  
+  eid = str(uuid.uuid4())
+  data = [{"from":"alice","to":"bob","subject":"meeting","content":"meet at 2pm","date":"2024-01-01 13:34:55"}]
   aes_key = group.random(G1)
   #print("aes key:",aes_key)
-  #print(f"size of aes key: {len(group.serialize(aes_key))*8}")
+  Cm, aes_enc_time = aes_enc(paeks.paekstobyte(aes_key)[:32], eid, data)
+  #print(f"aes encrypt: {Cm}")
+  print(f"aes enc time: {aes_enc_time} ms")
+  cm_size = calc_size(Cm, 'Cm')
+  print(f"Cm size: {cm_size} bits")
   
-  Cm = taes_encrypt(paeks.paekstobyte(aes_key)[:32], "eid", "hello there")
+  Ck, elgamal_enc_time = elgamal_enc(paeks.group, aes_key, eg_pk)
+  print(f"Ck: {Ck}")
+  ck_size = calc_size(Ck['c1'], 'g') + calc_size(Ck['c2'], 'g')
+  print(f"Ck size: {ck_size} bits")
+  eg_pk_size = calc_size(eg_pk['g'], 'g') + calc_size(eg_pk['y'], 'g')
   
-  Ck = tee(group, aes_key, eg_pk)
-  m = ted(group, Ck, eg_sk, eg_pk)
-  #print("elgamal decode aes key:",m)
+  key, elgamal_dec_time = elgamal_dec(paeks.group, Ck, paeks.sk_r)
+  print(f"dec aes key: {key}")
+  print(f"elgamal dec time: {elgamal_dec_time}")
   
-  #print("aes decrypt:",taes_decrypt(paeks.paekstobyte(m)[:32], Cm))
+  m, aes_dec_time = aes_dec(paeks.paekstobyte(key)[:32], Cm)
+  print(f"dec aes data: {m}")
+  print(f"aes dec time: {aes_dec_time} ms")
   
   keyword = "meetingurgent makan"
   
   #print("\nPAEKS...")
-  for n in range(1,6):
+  '''for n in range(1,6):
     total_paeks = 0
     for i in range(n*100):
       Cw, paeks_time = paeks.encrypt(keyword)
       total_paeks += paeks_time
-    print(f"{n*100} keywords: {total_paeks} ms")
-  '''start_time = time.time()
-  #Cw = paeks(pairing_type, group, params, keyword, sk_s.decode('utf-8'), pk_r.decode('utf-8'))
-  A,B = paeks.encrypt(keyword)
-  end_time = time.time()
-  paeks_time = (end_time - start_time) * 1000'''
-  #print(f"Cw: {Cw}")
-  #cw_size = len(Cw['B'])*8 + len(Cw['A'])
-  cw_size = len(paeks.strtobyte(Cw['A'])) + len(paeks.paekstobyte(Cw['B']))
-  
-  #if(pairing_type == 'type3'):
-  #Cw['B'] = Cw['B'].decode('utf-8')
+    print(f"{n*100} keywords: {total_paeks} ms")'''
+    
+  Cw, paeks_time = paeks.encrypt(keyword)
+  print(f"Cw: {Cw}")
+  cw_size = calc_size(Cw['B'], 'g') + len(Cw['A'])*4
   
   skeyword = "meetingurgent makan"
   
   #print("\nTrapdoor...")
   Tw, trapdoor_time = paeks.trapdoor(skeyword)
-  '''start_time = time.time()
-  Tw = paeks.trapdoor(skeyword)
-  end_time = time.time()
-  trapdoor_time = (end_time - start_time) * 1000'''
-  #print(f"Tw: {Tw}")
-  tw_size = len(paeks.paekstobyte(Tw))*8
-  
-  '''
-  if(pairing_type == 'type1'):
-    start_time = time.time()
-    Tw = trapdoor(pairing_type, group, params, skeyword, pk_s.decode('utf-8'), "", sk_r.decode('utf-8'))
-    end_time = time.time()
-    trapdoor_time = (end_time - start_time) * 1000
-  elif(pairing_type == 'type3'):
-    start_time = time.time()
-    Tw = trapdoor(pairing_type, group, params, skeyword, pk_s1.decode('utf-8'), pk_s2.decode('utf-8'), sk_r.decode('utf-8'))
-    end_time = time.time()
-    trapdoor_time = (end_time - start_time) * 1000'''
+  print(f"Tw: {Tw}")
+  tw_size = calc_size(Tw, 'g')
+  #tw_size = len(paeks.paekstobyte(Tw))*8
   
   #print("\nTest...")
   result, test_time = paeks.test(Cw, Tw)
-  '''start_time = time.time()
-  result = paeks.test({'A':A,'B':B}, Tw)
-  end_time = time.time()
-  test_time = (end_time - start_time) * 1000'''
-  #print(f"test result: {result}")
+  print(f"test result: {result}")
   
-  return [[setup_time,keygens_time,keygenr_time,paeks_time,trapdoor_time,test_time],[sk_size,pk_size,cw_size,tw_size]]
+  return [[setup_time,keygens_time,keygenr_time,paeks_time,trapdoor_time,test_time],[sk_size,pks_size,pkr_size,cw_size,tw_size],[aes_enc_time,aes_dec_time,elgamal_enc_time,elgamal_dec_time],[256,cm_size,eg_pk_size,ck_size]]
 
 def avg_exec_time(pairing_type, curve):
   print(f"\n{pairing_type} {curve} PAEKS running...")
@@ -708,7 +686,7 @@ def total_exec_time(pairing_type, curve):
     
   return total_times
 
-def graph(data1, data2, perf):  
+def graph(data1, data2, perf):
   plt.figure(num="PAEKS Performance Analysis")
   
   #TODO: decide whether to put performance generation on website or thru code only
@@ -728,7 +706,7 @@ def graph(data1, data2, perf):
   plt.ylabel("Size (bits)")
   plt.show()'''
   
-  if(perf == "perf"):
+  if(perf == "time"):
     x = ["Setup","KeyGenS","KeyGenR","PAEKS","Trapdoor","Test"]
     xaxis = np.arange(len(x))
     plt.bar(xaxis - 0.2, data1[0], 0.4, label = 'Type 1')
@@ -736,30 +714,51 @@ def graph(data1, data2, perf):
     plt.xticks(xaxis, x)
     plt.ylabel("Time (ms)")
     plt.title("Algorithms Execution Time")
-    plt.legend()
-  
+    plt.legend()  
     for i in range(len(x)):
       plt.text(i-0.4,data1[0][i], f"{data1[0][i]:.1f}")
-      plt.text(i,data2[0][i], f"{data2[0][i]:.1f}")
-          
+      plt.text(i,data2[0][i], f"{data2[0][i]:.1f}")          
     plt.show()
   
-  '''
-  x = ["Private Key","Public Key","Ciphertext","Trapdoor"]
-  xaxis = np.arange(len(x))
-  plt.bar(xaxis - 0.2, data1[1], 0.4, label = 'Type 1')
-  plt.bar(xaxis + 0.2, data2[1], 0.4, label = 'Type 3')
-  plt.xticks(xaxis, x)
-  plt.ylabel("Size (bits)")
-  plt.title("Communication Cost")
-  plt.legend()
-  
-  for i in range(len(x)):
-    plt.text(i-0.4,data1[1][i], f"{data1[1][i]}")
-    plt.text(i,data2[1][i], f"{data2[1][i]}")
+    x = ["Private Key","Public Key S","Public Key R","Ciphertext","Trapdoor"]
+    xaxis = np.arange(len(x))
+    plt.bar(xaxis - 0.2, data1[1], 0.4, label = 'Type 1')
+    plt.bar(xaxis + 0.2, data2[1], 0.4, label = 'Type 3')
+    plt.xticks(xaxis, x)
+    plt.ylabel("Size (bits)")
+    plt.title("Communication Cost")
+    plt.legend()    
+    for i in range(len(x)):
+      plt.text(i-0.4,data1[1][i], f"{data1[1][i]}")
+      plt.text(i,data2[1][i], f"{data2[1][i]}")      
+    plt.show()
     
-  plt.show()
-  '''
+    x = ["AES-GCM Encrypt","AES-GCM Decrypt","ElGamal Encrypt","ElGamal Decrypt"]
+    xaxis = np.arange(len(x))
+    plt.bar(xaxis - 0.2, data1[2], 0.4, label = 'Type 1')
+    plt.bar(xaxis + 0.2, data2[2], 0.4, label = 'Type 3')
+    plt.xticks(xaxis, x)
+    plt.ylabel("Time (ms)")
+    plt.title("Algorithms Execution Time")
+    plt.legend()  
+    for i in range(len(x)):
+      plt.text(i-0.4,data1[2][i], f"{data1[2][i]:.1f}")
+      plt.text(i,data2[2][i], f"{data2[2][i]:.1f}")          
+    plt.show()
+  
+    x = ["AES-GCM Key","AES-GCM Ciphertext","ElGamal Public Key","ElGamal Ciphertext"]
+    xaxis = np.arange(len(x))
+    plt.bar(xaxis - 0.2, data1[3], 0.4, label = 'Type 1')
+    plt.bar(xaxis + 0.2, data2[3], 0.4, label = 'Type 3')
+    plt.xticks(xaxis, x)
+    plt.ylabel("Size (bits)")
+    plt.title("Communication Cost")
+    plt.legend()    
+    for i in range(len(x)):
+      plt.text(i-0.4,data1[3][i], f"{data1[3][i]}")
+      plt.text(i,data2[3][i], f"{data2[3][i]}")      
+    plt.show()
+  
   
   if(perf == "linear"):
     x = ["100","200","300","400","500"]
@@ -792,9 +791,9 @@ if __name__ == "__main__":
   #type1 = perf_paeks('type1','SS512')
   #type3 = perf_paeks('type3','SS512')
   #type3 = avg_exec_time('type3','SS512')
-  #type1 = perf_paeks('type1','SS1024')
-  #type3 = perf_paeks('type3','BN254')
-  #graph(type1, type3, "time")
+  type1 = perf_paeks('type1','SS1024')
+  type3 = perf_paeks('type3','BN254')
+  graph(type1, type3, "time")
   #graph([6611.426115036011, 13251.993417739868, 19288.49983215332, 26891.41607284546, 32149.068355560303], [1648.468017578125, 2997.518539428711, 6832.550525665283, 7501.449108123779, 10109.870195388794], "linear") #paeks encrypt
-  app.run(host="127.0.0.1", port=int(os.environ.get('PORT', 8080)), debug=True)
+  #app.run(host="127.0.0.1", port=int(os.environ.get('PORT', 8080)), debug=True)
 
