@@ -89,7 +89,7 @@ function register(){
       },
       success: function(result) {
         if(result.status === "success"){
-          window.location = "static/login.html";
+          window.location = "login.html";
         } else if (result.status === "fail") {
           alert("Fail registration: " + result.msg);
         } else {
@@ -206,35 +206,43 @@ function search(){
     type: "POST",
     url: "/search",
     data: JSON.stringify(data),
-    success: function(result) {      
-      let entries = Object.entries(result);      
-      entries.sort((a, b) => {
-        const dateA = new Date(a[1].date);
-        const dateB = new Date(b[1].date);
-        return dateB - dateA; // descending order
-      });
-      //console.log(entries); //[[eid,obj],[eid,obj]]      
-      result = Object.fromEntries(entries);
-      //console.log(result);
-
-      var size = Object.keys(result).length;
-      document.getElementById('no_result').innerHTML = size+" searching results";
-
-      var data = "";
-
-      Object.keys(result).forEach(key1 => {
-        const value1 = result[key1];
-        
-        data += `<div class="result_row" id="`+key1+`" onclick='view("`+key1+`");'>
-          <img src="image/user.png" alt="user">
-          <p id="username">`+value1.username+`</p>
-          <p id="from" hidden>`+value1.from+`</p>
-          <p id="subject">`+value1.subject+`</p>
-          <p id="date">`+value1.date+`</p>
-          <p id="content" hidden>`+value1.content.replace(/\n/g, '<br>')+`</p>
-        </div>`;
-      });
-      document.getElementById('result_list').innerHTML = data;
+    success: function(result) {
+      if(result.status === "success"){
+        let entries = Object.entries(result.data);      
+        entries.sort((a, b) => {
+          const dateA = new Date(a[1].date);
+          const dateB = new Date(b[1].date);
+          return dateB - dateA; // descending order
+        });
+        //console.log(entries); //[[eid,obj],[eid,obj]]      
+        result.data = Object.fromEntries(entries);
+        //console.log(result);
+	    
+        var size = Object.keys(result.data).length;
+        document.getElementById('no_result').innerHTML = size+" searching results";
+	    
+        var data = "";
+	    
+        Object.keys(result.data).forEach(key1 => {
+          const value1 = result.data[key1];
+          
+          data += `<div class="result_row" id="`+key1+`" onclick='view("`+key1+`");'>
+            <img src="image/user.png" alt="user">
+            <p id="username">`+value1.username+`</p>
+            <p id="from" hidden>`+value1.from+`</p>
+            <p id="subject">`+value1.subject+`</p>
+            <p id="date">`+value1.date+`</p>
+            <p id="content" hidden>`+value1.content.replace(/\n/g, '<br>')+`</p>
+          </div>`;
+        });
+        document.getElementById('result_list').innerHTML = data;
+      } else if (result.status === "fail") {
+        alert("Fail sending: " + result.msg);
+      } else {
+        console.error("Unexpected response:", result);
+        alert("Unexpected response from server. Please try again later.");
+      }     
+      
     } 
   })
 }
