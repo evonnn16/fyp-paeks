@@ -105,112 +105,6 @@ class PAEKS:
     return self.group.deserialize(bytes(string_obj, 'utf-8'))
     #return self.group.deserialize(string_obj.encode('utf-8'))
 
-'''
-def setup(pairing_type, group):
-
-  if(pairing_type == 'type3'):
-    g1 = group.random(G1)
-    g2 = group.random(G2)
-    u = pair(g1, g2)
-    params = {'g1':group.serialize(g1),'g2':group.serialize(g2),'u':group.serialize(u)}
-  elif(pairing_type == 'type1'):
-    g = group.random(G1)
-    u = pair(g, g)
-    params = {'g':group.serialize(g),'u':group.serialize(u)}
-  return params
-
-def keygens(pairing_type, group, params):
-  y = group.random(ZR)
-  sk_s = group.serialize(y) #convert object to byte
-  
-  if(pairing_type == 'type3'):
-    #print(f"g1 byte:{params['g1']}\ng1 str:{params['g1'].decode('utf-8')}\ng1 pairing element:{group.deserialize(params['g1'])}\ng1 convert:{group.deserialize(bytes(params['g1'].decode('utf-8'), 'utf-8'))}")
-    pk_s1 = group.serialize(group.deserialize(bytes(params['g1'], 'utf-8')) ** y) #in db store as str, convert to byte then deserialize
-    pk_s2 = group.serialize(group.deserialize(bytes(params['g2'], 'utf-8')) ** y)
-    return [sk_s,pk_s1,pk_s2]
-  elif(pairing_type == 'type1'):
-    pk_s = group.serialize(group.deserialize(bytes(params['g'], 'utf-8')) ** y)
-    return [sk_s,pk_s]
-
-def keygenr(pairing_type, group, params):
-  x = group.random(ZR)
-  sk_r = group.serialize(x)
-  
-  if(pairing_type == 'type3'):
-    pk_r = group.serialize(group.deserialize(bytes(params['g1'], 'utf-8')) ** x)
-  elif(pairing_type == 'type1'):
-    pk_r = group.serialize(group.deserialize(bytes(params['g'], 'utf-8')) ** x)
-  return [sk_r,pk_r]
-
-def paeks(pairing_type, group, params, w, sk_s, pk_r):
-  r = group.random(ZR)
-  temp = (group.deserialize(bytes(params['u'], 'utf-8'))**group.deserialize(bytes(sk_s, 'utf-8')))**r
-  A = hash2(repr(temp).encode()).hexdigest()
-  temp = group.deserialize(bytes(pk_r, 'utf-8'))**group.deserialize(bytes(sk_s, 'utf-8'))
-  v = group.hash((w,temp),ZR) #H1
-  
-  if(pairing_type == 'type3'):
-    B = group.deserialize(bytes(params['g1'], 'utf-8'))**(v*r) * group.deserialize(bytes(pk_r, 'utf-8'))**r
-  elif(pairing_type == 'type1'):
-    B = group.deserialize(bytes(params['g'], 'utf-8'))**(v*r) * group.deserialize(bytes(pk_r, 'utf-8'))**r
-  return {'A':str(A), 'B':group.serialize(B)}
-
-def trapdoor(pairing_type, group, params, w2, pk_s1, pk_s2, sk_r):
-  sk_r = group.deserialize(bytes(sk_r, 'utf-8'))
-  #temp2 = group.deserialize(bytes(pk_s1, 'utf-8'))**sk_r
-  v2 = group.hash((w2,group.deserialize(bytes(pk_s1, 'utf-8'))**sk_r),ZR) #H1
-  if(pairing_type == 'type3'):
-    Tw = group.deserialize(bytes(pk_s2, 'utf-8'))**(1/(sk_r+v2))
-  elif(pairing_type == 'type1'):
-    Tw = group.deserialize(bytes(pk_s1, 'utf-8'))**(1/(sk_r+v2))
-  return group.serialize(Tw)
-
-def test(pairing_type, group, Cw, Tw):
-  try:
-    #if(pairing_type == 'type3'):
-    pairing = pair(group.deserialize(Tw),group.deserialize(bytes(Cw['B'], 'utf-8')))
-    #elif(pairing_type == 'type1'):
-    #  pairing = pair(group.deserialize(Tw),group.deserialize(Cw['B']))
-    lhs = hash2(repr(pairing).encode()).hexdigest()
-    return lhs == Cw['A']
-  except Exception as e:
-    print(f"Error in Test function: {e}")
-    return False
-
-def aes_encrypt(eid, data):
-  header = eid.encode('UTF-8')
-  #print(header)
-  edata = json.dumps({
-    'from': data[0]['from'],
-    'to': data[0]['to'],
-    'subject': data[0]['subject'],
-    'content': data[0]['content'],
-    'date': data[0]['date']
-  }).encode('utf-8')
-  #print(edata)
-  
-  key = get_random_bytes(32)
-  c = AES.new(key, AES.MODE_GCM)
-  c.update(header)
-  ciphertext, tag = c.encrypt_and_digest(edata)
-  
-  Cm = {
-    'nonce': base64.b64encode(c.nonce).decode('utf-8'),
-    'header': base64.b64encode(header).decode('utf-8'),
-    'ciphertext': base64.b64encode(ciphertext).decode('utf-8'),
-    'tag': base64.b64encode(tag).decode('utf-8')
-  }
-  #print(f"{type(Cm)} : {Cm}")
-  #print(f"{type(json.dumps(Cm))} : {json.dumps(Cm)}")
-  return key, Cm
-
-def aes_decrypt(key, Cm):
-  c = AES.new(key, AES.MODE_GCM, nonce=base64.b64decode(Cm['nonce']))
-  c.update(base64.b64decode(Cm['header']))
-  m = c.decrypt_and_verify(base64.b64decode(Cm['ciphertext']), base64.b64decode(Cm['tag']))
-  #print("The message was: " + m.decode('utf-8'))
-  return json.loads(m.decode('utf-8'))
-'''
 @measure_time
 def aes_enc(key, eid, data):
   header = eid.encode('UTF-8')
@@ -221,7 +115,7 @@ def aes_enc(key, eid, data):
     'content': data[0]['content'],
     'date': data[0]['date']
   }).encode('utf-8')
-  
+  #key = get_random_bytes(32)
   c = AES.new(key, AES.MODE_GCM)
   c.update(header)
   ciphertext, tag = c.encrypt_and_digest(edata)
@@ -273,37 +167,6 @@ def elgamal_decrypt(Ck, sk, pk):
   p = int(json.loads(base64.b64decode(pk).decode('utf-8'))['p'])
   m = int(Ck['c2']) * pow(int(Ck['c1']), p-1-int(base64.b64decode(sk).decode('utf-8')), p) % p
   return m.to_bytes((m.bit_length() + 7) // 8, 'big')
-
-def tee(group, msg, pk):
-  pk = {
-      'g': group.deserialize(pk['g']),
-      'y': group.deserialize(pk['y'])
-  }
-  #print(f"tee pk: {pk}")
-  
-  #m = int.from_bytes(msg, 'big')
-  #m = pk['g'] ** msg # Map scalar to a point
-  k = group.random(ZR)
-  #print(f"k: {k}")
-  c1 = pk['g'] ** k
-  #print(f"c1: {c1}")
-  c2 = msg * (pk['y'] ** k)
-  #print(f"c2: {c2}")
-  return {'c1': c1, 'c2': c2}
-
-def ted(group, Ck, sk, pk):
-  pk = {
-      'g': group.deserialize(pk['g']),
-      'y': group.deserialize(pk['y'])
-  }
-  x = group.deserialize(sk)
-  
-  c1, c2 = Ck['c1'], Ck['c2']
-  #print(f"dec c1: {c1}")
-  #print(f"dec c2: {c2}")
-  #m = c2 * ((c1 ** x) ** -1)
-  m = c2 / (c1 ** x)
-  return m
 '''
 @measure_time
 def elgamal_enc(group, msg, pk):
@@ -404,15 +267,19 @@ def insert():
   #print(data[0]['to'],"pk_r:",paeks.pk_r)
   
   keyword = data[0]['keyword'].split(' ')
-  keyword.sort()
-  #print(keyword)
+  #keyword.sort()
+  print(keyword)
+  Cw = []
   
-  Cw, paeks_time = paeks.encrypt(str(keyword))
-  #print("Cw:",Cw)
-  cw_size = calc_size(Cw['B'], 'g') + len(Cw['A'])*4
-  Cw['B'] = paeks.paekstobyte(Cw['B'])
-  print("paeks time taken:",paeks_time)
-  print(f"Cw size: {cw_size} bits")
+  for i in keyword:
+    cw, paeks_time = paeks.encrypt(i)
+    #print(f"cw {i}: {cw}")
+    cw_size = calc_size(cw['B'], 'g') + len(cw['A'])*4
+    cw['B'] = paeks.paekstobyte(cw['B'])
+    print(f"paeks {i} time taken: {paeks_time}")
+    print(f"cw {i} size: {cw_size} bits")
+    Cw.append(cw)
+  #print(Cw)
   
   eid = str(uuid.uuid4())
   
@@ -467,8 +334,7 @@ def search():
   #print(f"{users[r]['username']} sk_r: {paeks.sk_r}")
   
   keyword = data[0]['keyword'].split(' ')
-  keyword.sort()
-  #print(keyword)
+  print(keyword)
   
   emails = db.reference('emails/').child(r).get()
   received_mails = {}
@@ -476,42 +342,33 @@ def search():
     for s in emails:
       paeks.pk_s1 = paeks.strtopaeks(users[s]["pk_s1"])
       paeks.pk_s2 = paeks.strtopaeks(users[s]["pk_s2"])
-      #print(f"{users[s]['username']}: pk_s1: {paeks.pk_s1}, pk_s2: {paeks.pk_s2}")
+      #print(f"s: {users[s]['username']}: pk_s1: {paeks.pk_s1}, pk_s2: {paeks.pk_s2}")
       
-      Tw, trapdoor_time = paeks.trapdoor(str(keyword))
-      #print(f"trapdoor: {Tw}")
-      print("trapdoor time taken:",trapdoor_time)
-      tw_size = calc_size(Tw, 'g')
-      print(f"Tw size: {tw_size} bits")
-      
-      for e in emails[s]:
-        emails[s][e]["keyword"]['B'] = paeks.strtopaeks(emails[s][e]["keyword"]['B'])
-        result, test_time = paeks.test(emails[s][e]["keyword"],Tw)
-        print("test time taken:",test_time)
+      for w in keyword:
+        Tw, trapdoor_time = paeks.trapdoor(w)
+        #print(f"trapdoor {w}: {Tw}")
+        print(f"trapdoor {w} time taken: {trapdoor_time}")
+        tw_size = calc_size(Tw, 'g')
+        print(f"Tw {w} size: {tw_size} bits")
         
-        if(result):
-          emails[s][e]['key']['c1'] = paeks.strtopaeks(emails[s][e]['key']['c1'])
-          emails[s][e]['key']['c2'] = paeks.strtopaeks(emails[s][e]['key']['c2'])
-          key, elgamal_dec_time = elgamal_dec(paeks.group, emails[s][e]['key'], paeks.sk_r)
-          #print(f"dec aes key: {key}")
-          print(f"elgamal dec time: {elgamal_dec_time}")
+        for e in emails[s]:
+          for k in emails[s][e]['keyword']:
+            if isinstance(k['B'], str): k['B'] = paeks.strtopaeks(k['B'])
+            result, test_time = paeks.test(k,Tw)
+            print("test time taken:",test_time)
           
-          m, aes_dec_time = aes_dec(paeks.paekstobyte(key)[:32], emails[s][e]['ciphertext'])
-          received_mails[e] = m
-          print("aes dec time:",aes_dec_time)
-          received_mails[e]["username"] = [users[k]['username'] for k in users if users[k]['email'] == received_mails[e]["from"]][0]
-        '''
-        perf = db.reference('performance/time/test/')
-        if(perf.get() == None): perf.set({"sum":test_time,"count":1})
-        else: perf.set({"sum":perf.get()["sum"] + test_time,"count":perf.get()["count"]+1})
-      
-      perf = db.reference('performance/time/trapdoor/')
-      if(perf.get() == None): perf.set({"sum":trapdoor_time,"count":1})
-      else: perf.set({"sum":perf.get()["sum"] + trapdoor_time,"count":perf.get()["count"]+1})
-      
-      perf = db.reference('performance/size/trapdoor/')
-      if(perf.get() == None): perf.set({"sum":tw_size,"count":1})
-      else: perf.set({"sum":perf.get()["sum"] + tw_size,"count":perf.get()["count"]+1})'''
+            if(result):
+              if isinstance(emails[s][e]['key']['c1'], str): 
+                emails[s][e]['key']['c1'] = paeks.strtopaeks(emails[s][e]['key']['c1'])
+                emails[s][e]['key']['c2'] = paeks.strtopaeks(emails[s][e]['key']['c2'])
+              key, elgamal_dec_time = elgamal_dec(paeks.group, emails[s][e]['key'], paeks.sk_r)
+              #print(f"dec aes key: {key}")
+              print(f"elgamal dec time: {elgamal_dec_time}")
+              
+              m, aes_dec_time = aes_dec(paeks.paekstobyte(key)[:32], emails[s][e]['ciphertext'])
+              received_mails[e] = m
+              print("aes dec time:",aes_dec_time)
+              received_mails[e]["username"] = [users[i]['username'] for i in users if users[i]['email'] == received_mails[e]["from"]][0]
   
   #print(f"search result:{received_mails}")
   
@@ -644,48 +501,6 @@ def avg_exec_time(pairing_type, curve):
   
   return [[average_setup_time, average_keygens_time, average_keygenr_time, average_paeks_time, average_trapdoor_time, average_test_time],[]]
 
-def total_exec_time(pairing_type, curve):
-  print(f"\n{pairing_type} {curve} PAEKS running...")
-  
-  exec_counts = [100, 200, 300, 400, 500]
-  total_times = {count: [] for count in exec_counts}
-    
-  for count in exec_counts:
-    setup_times = []
-    keygens_times = []
-    keygenr_times = []
-    paeks_times = []
-    trapdoor_times = []
-    test_times = []
-    
-    for i in range(count):
-      data = perf_paeks(pairing_type, curve)
-      
-      setup_times.append(data[0][0])
-      keygens_times.append(data[0][1])
-      keygenr_times.append(data[0][2])
-      paeks_times.append(data[0][3])
-      trapdoor_times.append(data[0][4])
-      test_times.append(data[0][5])
-        
-    total_setup_time = np.sum(setup_times)
-    total_keygens_time = np.sum(keygens_times)
-    total_keygenr_time = np.sum(keygenr_times)
-    total_paeks_time = np.sum(paeks_times)
-    total_trapdoor_time = np.sum(trapdoor_times)
-    total_test_time = np.sum(test_times)
-    
-    total_times[count] = [
-      total_setup_time, 
-      total_keygens_time, 
-      total_keygenr_time, 
-      total_paeks_time, 
-      total_trapdoor_time, 
-      total_test_time
-    ]
-    
-  return total_times
-
 def graph(data1, data2, perf):
   plt.figure(num="PAEKS Performance Analysis")
   
@@ -791,9 +606,9 @@ if __name__ == "__main__":
   #type1 = perf_paeks('type1','SS512')
   #type3 = perf_paeks('type3','SS512')
   #type3 = avg_exec_time('type3','SS512')
-  type1 = perf_paeks('type1','SS1024')
-  type3 = perf_paeks('type3','BN254')
-  graph(type1, type3, "time")
+  #type1 = perf_paeks('type1','SS1024')
+  #type3 = perf_paeks('type3','BN254')
+  #graph(type1, type3, "time")
   #graph([6611.426115036011, 13251.993417739868, 19288.49983215332, 26891.41607284546, 32149.068355560303], [1648.468017578125, 2997.518539428711, 6832.550525665283, 7501.449108123779, 10109.870195388794], "linear") #paeks encrypt
-  #app.run(host="127.0.0.1", port=int(os.environ.get('PORT', 8080)), debug=True)
+  app.run(host="127.0.0.1", port=int(os.environ.get('PORT', 8080)), debug=True)
 
