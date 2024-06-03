@@ -227,7 +227,7 @@ function search(){
           const value1 = result.data[key1];
           
           data += `<div class="result_row" id="`+key1+`" onclick='view("`+key1+`");'>
-            <img src="image/user.png" alt="user">
+            <img src="image/user2.png" alt="user">
             <p id="username">`+value1.username+`</p>
             <p id="from" hidden>`+value1.from+`</p>
             <p id="subject">`+value1.subject+`</p>
