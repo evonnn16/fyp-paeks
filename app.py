@@ -63,7 +63,7 @@ class PAEKS:
   @measure_time
   def encrypt(self, w):
     r = self.group.random(ZR)
-    A = self.hash2(repr((self.u ** self.sk_s) ** r).encode()).hexdigest()
+    A = self.hash2(repr((self.u ** self.sk_s) ** r).encode()).digest() #.hexdigest()
     v = self.group.hash((w, self.pk_r ** self.sk_s),ZR) #H1
   
     if(self.pairing_type == 'type3'):
@@ -85,7 +85,11 @@ class PAEKS:
   @measure_time
   def test(self, Cw, Tw):
     pairing = pair(Tw, Cw['B'])
-    lhs = self.hash2(repr(pairing).encode()).hexdigest()
+    lhs = self.hash2(repr(pairing).encode()).digest() #.hexdigest()
+    if(self.pairing_type == 'type3'):
+      lhs = adjust_hash_size(lhs, 254)
+    elif(self.pairing_type == 'type1'):
+      lhs = adjust_hash_size(lhs, 1024)
     return lhs == Cw['A']
   
   def paekstobyte(self, paeks_obj):
@@ -134,40 +138,7 @@ def aes_dec(key, Cm):
   c.update(base64.b64decode(Cm['header']))
   m = c.decrypt_and_verify(base64.b64decode(Cm['ciphertext']), base64.b64decode(Cm['tag']))
   return json.loads(m.decode('utf-8'))
-'''
-def elgamal_keygen():
-  p = getPrime(2048)
-  print("p:",p,"-",p.bit_length(),"bits")
-  #x = getRandomRange(1, p-2) #sk
-  x = randrange(1, p-2)
-  print("x:",x,"-",x.bit_length(),"bits")
-  #g = getRandomRange(1, p-1) 
-  g = randrange(1, p-1)
-  print("g:",g,"-",g.bit_length(),"bits")
-  y = pow(g, x, p)
-  #print("y:",y,"-",y.bit_length(),"bits")
-  #pk = {'p':base64.b64encode(str(p).encode()),'g':base64.b64encode(str(g).encode()),'y':base64.b64encode(str(y).encode())} # ElGamal.construct((p, g, y))
-  #return {'p':base64.b64encode(str(p).encode()),'x':base64.b64encode(str(x).encode())}, pk
-  pk = {'p':p,'g':g,'y':y}
-  #sk = {'p':p,'x':x}
-  return base64.b64encode(str(x).encode('utf-8')), base64.b64encode(json.dumps(pk).encode('utf-8'))
 
-def elgamal_encrypt(msg, eg_pk):
-  pk = json.loads(base64.b64decode(eg_pk).decode('utf-8'))
-  m = int.from_bytes(msg, 'big')
-  k = randrange(1, int(pk['p'])-2)
-  #print("k:",k,"-",k.bit_length(),"bits")
-
-  c1 = pow(int(pk['g']), k, int(pk['p']))
-  c2 = m * pow(pk['y'], k, pk['p']) % pk['p']
-  #cm = (c1, c2)
-  return {'c1':str(c1), 'c2':str(c2)}
-
-def elgamal_decrypt(Ck, sk, pk):
-  p = int(json.loads(base64.b64decode(pk).decode('utf-8'))['p'])
-  m = int(Ck['c2']) * pow(int(Ck['c1']), p-1-int(base64.b64decode(sk).decode('utf-8')), p) % p
-  return m.to_bytes((m.bit_length() + 7) // 8, 'big')
-'''
 @measure_time
 def elgamal_enc(group, msg, pk):
   k = group.random(ZR)
@@ -195,6 +166,10 @@ def calc_size(data, data_type):
   elif data_type == 'g':    
     bsize = [int(i) for i in re.findall(r'\d+', str(data))]
     return sum(len(bin(i))-2 for i in bsize)
+
+def adjust_hash_size(data, size):
+  binstr = ''.join(format(byte, '08b') for byte in data)
+  return binstr[:size].ljust(size, '0')
 
 @app.route("/") 
 def index():
@@ -416,8 +391,8 @@ def perf_paeks(pairing_type, lamda):
   
   result, keygenr_time = paeks.keygenr()
   print(f"sk_r: {paeks.sk_r}\npk_r: {paeks.pk_r}")
-  pkr_size = calc_size(str(paeks.pk_r), 'g')  
-  sk_size = len(bin(int(str(paeks.sk_r))))
+  pkr_size = calc_size(str(paeks.pk_r), 'g')
+  sk_size = len(bin(int(str(paeks.sk_r))))-2
   
   eg_pk['y'] = paeks.pk_r
   
@@ -432,17 +407,17 @@ def perf_paeks(pairing_type, lamda):
   print(f"Cm size: {cm_size} bits")
   
   Ck, elgamal_enc_time = elgamal_enc(paeks.group, aes_key, eg_pk)
-  print(f"Ck: {Ck}")
+  #print(f"Ck: {Ck}")
   ck_size = calc_size(Ck['c1'], 'g') + calc_size(Ck['c2'], 'g')
   print(f"Ck size: {ck_size} bits")
   eg_pk_size = calc_size(eg_pk['g'], 'g') + calc_size(eg_pk['y'], 'g')
   
   key, elgamal_dec_time = elgamal_dec(paeks.group, Ck, paeks.sk_r)
-  print(f"dec aes key: {key}")
+  #print(f"dec aes key: {key}")
   print(f"elgamal dec time: {elgamal_dec_time}")
   
   m, aes_dec_time = aes_dec(paeks.paekstobyte(key)[:32], Cm)
-  print(f"dec aes data: {m}")
+  #print(f"dec aes data: {m}")
   print(f"aes dec time: {aes_dec_time} ms")
   
   keyword = "meetingurgent makan"
@@ -456,8 +431,14 @@ def perf_paeks(pairing_type, lamda):
     print(f"{n*100} keywords: {total_paeks} ms")'''
     
   Cw, paeks_time = paeks.encrypt(keyword)
+  
+  if(pairing_type == 'type3'):
+    Cw['A'] = adjust_hash_size(Cw['A'], 254)
+  elif(pairing_type == 'type1'): 
+    Cw['A'] = adjust_hash_size(Cw['A'], 1024)
   print(f"Cw: {Cw}")
-  cw_size = calc_size(Cw['B'], 'g') + len(Cw['A'])*4
+  cw_size = calc_size(Cw['B'], 'g') + len(Cw['A'])
+  #print(f"Cw A size: {len(Cw['A'])}")
   
   skeyword = "meetingurgent makan"
   
@@ -606,9 +587,9 @@ if __name__ == "__main__":
   #type1 = perf_paeks('type1','SS512')
   #type3 = perf_paeks('type3','SS512')
   #type3 = avg_exec_time('type3','SS512')
-  #type1 = perf_paeks('type1','SS1024')
-  #type3 = perf_paeks('type3','BN254')
-  #graph(type1, type3, "time")
+  type1 = perf_paeks('type1','SS1024')
+  type3 = perf_paeks('type3','BN254')
+  graph(type1, type3, "time")
   #graph([6611.426115036011, 13251.993417739868, 19288.49983215332, 26891.41607284546, 32149.068355560303], [1648.468017578125, 2997.518539428711, 6832.550525665283, 7501.449108123779, 10109.870195388794], "linear") #paeks encrypt
-  app.run(host="127.0.0.1", port=int(os.environ.get('PORT', 8080)), debug=True)
+  #app.run(host="127.0.0.1", port=int(os.environ.get('PORT', 8080)), debug=True)
 
