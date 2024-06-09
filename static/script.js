@@ -60,45 +60,49 @@ function register(){
   
   if(username=="" || pwd == "" || pwd2 == "" || email == "") return alert("Please fill in all information")
 
-  if(pwd != pwd2)
-    alert("Passwords are not matched")
-  else{
-    if(!email.includes("@paeks.mail.com")){
-      email = email.split("@")[0]+"@paeks.mail.com";
-    }
+  let pwdPattern = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+{}:<>?~])[A-Za-z\d!@#$%^&*()_+{}:<>?~]{8,}$/;
+  let upcasePattern = /[A-Z]/;
+  if(!pwdPattern.test(pwd) || !upcasePattern.test(pwd)) return alert("Password must be at least 8 characters long, contain at least one alphabetic character, one digit, one special character, and one uppercase letter");
 
-    var data = [{
-      "username": username,
-      "email": email,
-      "pwd": pwd
-    }];
+  if(pwd != pwd2)
+    return alert("Passwords are not matched")
   
-    $.ajax({
-      headers: { 
-        'Accept': 'application/json',
-        'Content-Type': 'application/json' 
-      },
-      type: "POST",
-      url: "/register",
-      data: JSON.stringify(data),
-      beforeSend: function(){
-        $('#loading').show();
-      },
-      complete: function(){
-        $('#loading').hide();
-      },
-      success: function(result) {
-        if(result.status === "success"){
-          window.location = "login.html";
-        } else if (result.status === "fail") {
-          alert("Fail registration: " + result.msg);
-        } else {
-          console.error("Unexpected response:", result);
-          alert("Unexpected response from server. Please try again later.");
-        }
-      } 
-    })
+  if(!email.includes("@paeks.mail.com")){
+    email = email.split("@")[0]+"@paeks.mail.com";
   }
+
+  var data = [{
+    "username": username,
+    "email": email,
+    "pwd": pwd
+  }];
+  
+  $.ajax({
+    headers: { 
+      'Accept': 'application/json',
+      'Content-Type': 'application/json' 
+    },
+    type: "POST",
+    url: "/register",
+    data: JSON.stringify(data),
+    /*beforeSend: function(){
+      $('#loading').show();
+    },
+    complete: function(){
+      $('#loading').hide();
+    },*/
+    success: function(result) {
+      if(result.status === "success"){
+        window.location = "login.html";
+      } else if (result.status === "fail") {
+        alert("Fail registration: " + result.msg);
+      } else {
+        console.error("Unexpected response:", result);
+        alert("Unexpected response from server. Please try again later.");
+      }
+    } 
+  })
+
 }
 
 function login(){
@@ -137,6 +141,62 @@ function login(){
       }
     } 
   })
+}
+
+function show_popup() {
+  document.getElementById('pwd_popup').style.display = 'block';
+  document.getElementById('overlay').style.display = 'block';
+}
+
+function hide_popup() {
+  document.getElementById('pwd_popup').style.display = 'none';
+  document.getElementById('overlay').style.display = 'none';
+}
+
+function change_pwd() {
+  let oldpwd = document.getElementById('oldpwd').value;
+  let newpwd = document.getElementById('newpwd').value;
+  let newpwd2 = document.getElementById('newpwd2').value;
+
+  if(newpwd === oldpwd)  return alert("New password cannot be the same as the old password.");
+  if(newpwd !== newpwd2) return alert("New password and confirm password do not match.");
+  let pwdPattern = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+{}:<>?~])[A-Za-z\d!@#$%^&*()_+{}:<>?~]{8,}$/;
+  let upcasePattern = /[A-Z]/;
+  if(!pwdPattern.test(newpwd) || !upcasePattern.test(newpwd)) return alert("Password must be at least 8 characters long, contain at least one alphabetic character, one digit, one special character, and one uppercase letter");
+  
+  var data = [{
+    "uid": localStorage.getItem('uid'),
+    "old": oldpwd,
+    "new": newpwd
+  }];
+  
+  $.ajax({
+    headers: { 
+      'Accept': 'application/json',
+      'Content-Type': 'application/json' 
+    },
+    type: "POST",
+    url: "/change_pwd",
+    data: JSON.stringify(data),
+    /*beforeSend: function(){
+      $('#loading').show();
+    },
+    complete: function(){
+      $('#loading').hide();
+    },*/
+    success: function(result) {
+      if(result.status === "success"){
+        hide_popup();
+        alert("Password changed successfully.");
+      } else if (result.status === "fail") {
+        alert("Fail to change password: " + result.msg);
+      } else {
+        console.error("Unexpected response:", result);
+        alert("Unexpected response from server. Please try again later.");
+      }
+    } 
+  })
+
 }
 
 function logout(){

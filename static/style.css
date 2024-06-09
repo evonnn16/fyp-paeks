@@ -287,6 +287,79 @@ body {
     background-color: #AC9BEF;
     cursor: pointer;
 }
+
+.overlay {
+    display: none; 
+    position: fixed; 
+    z-index: 8; 
+    left: 0; 
+    top: 0; 
+    width: 100%; 
+    height: 100%; 
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.pwd_popup {
+    display: none; 
+    position: fixed; 
+    z-index: 9; 
+    left: 50%; 
+    top: 50%; 
+    transform: translate(-50%, -50%); 
+    width: 40vw; 
+    background-color: white;
+    border-radius: 5px;
+    box-shadow: 1px 1px 10px 5px rgba(0,0,0,0.2);
+    padding: 20px;
+    flex-direction: column;
+    gap: 10px;
+    box-sizing: border-box;
+}
+
+.pwd_popup h3 {
+    margin-bottom: 20px;
+}
+
+.pwd_popup p {
+    margin-top: 10px;
+    margin-bottom: 1px;
+    font-size: 80%;
+}
+
+.pwd_popup input {
+    width: 100%;
+    padding: 10px;
+    margin: 5px 0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-sizing: border-box;
+}
+
+.pwd_popup button {
+    padding: 10px;
+    margin: 15px 0 5px 0;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    color: white;
+}
+
+.pwd_popup button.submit {
+    background-color: #6551B3;
+}
+
+.pwd_popup button.submit:hover {
+    background-color: #AC9BEF;
+}
+
+.pwd_popup button.cancel {
+    background-color: #F44336;
+}
+
+.pwd_popup button.cancel:hover {
+    background-color: #FAAAA4;
+}
+
 .login_body {
     display: flex;
     flex-direction: column;

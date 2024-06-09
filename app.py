@@ -313,7 +313,7 @@ def search():
   #print(f"{users[r]['username']} sk_r: {paeks.sk_r}")
   
   keyword = data[0]['keyword'].split(' ')
-  print(keyword)
+  #print(keyword)
   
   emails = db.reference('emails/').child(r).get()
   received_mails = {}
@@ -358,6 +358,16 @@ def profile():
   uid = request.get_json()
   u = db.reference('users/').child(uid).get()
   return {"status":"success","username":u["username"],"email":u["email"]}
+
+@app.route('/change_pwd', methods=['GET', 'POST'])
+def change_pwd():
+  data = request.get_json()
+  u = db.reference('users/').child(data[0]['uid']).get()
+  if(verify_pwd(u["hash"],u["salt"],data[0]['old'])):
+    salt, pwd_hash = hashing_pwd(data[0]['new'])
+    db.reference('users/').child(data[0]['uid']).update({'salt': salt, 'hash': pwd_hash})
+    return {"status": "success"}
+  else: return {"status": "fail", "msg": "Old password is incorrect"}
 
 def perf_paeks(pairing_type, lamda, action):
   print(f"\n{pairing_type} {lamda} PAEKS running...")
@@ -557,12 +567,18 @@ def graph(data, perf):
     #x = ["1120","2088","3096","4104","5112"]
     #x = ["1","2","3","4","5"]
     x = data[1][0]
-    plt.plot(x, data[0][0], marker='o', label = "AES-GCM Encrypt")
+    labels = ["AES-GCM Encrypt", "AES-GCM Decrypt", "ElGamal Encrypt", "ElGamal Decrypt"]
+    y_data = data[0]
+    for y, label in zip(y_data, labels):
+      plt.plot(x, y, marker='o', label=label)
+      for i, j in zip(x, y):
+        plt.annotate(f"{j:.2f}", xy=(i, j), xytext=(0, 5), textcoords='offset points') #f"({i:.2f}, {j:.2f})"
+    '''plt.plot(x, data[0][0], marker='o', label = "AES-GCM Encrypt")
     plt.plot(x, data[0][1], marker='o', label = "AES-GCM Decrypt")
     plt.plot(x, data[0][2], marker='o', label = "ElGamal Encrypt")
-    plt.plot(x, data[0][3], marker='o', label = "ElGamal Decrypt")
+    plt.plot(x, data[0][3], marker='o', label = "ElGamal Decrypt")'''
     plt.xlabel("Size of Email (KB)")
-    plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    plt.legend(loc='center left', bbox_to_anchor=(1, 0.6))
     plt.grid(True)
     '''x = ["AES-GCM Encrypt", "AES-GCM Decrypt", "ElGamal Encrypt", "ElGamal Decrypt"]
     xaxis = np.arange(len(x))
@@ -624,10 +640,10 @@ if __name__ == "__main__":
   #graph([6611.426115036011, 13251.993417739868, 19288.49983215332, 26891.41607284546, 32149.068355560303], [1648.468017578125, 2997.518539428711, 6832.550525665283, 7501.449108123779, 10109.870195388794], "linear") #paeks encrypt
   #graph([[1024, 2066, 2066, 3090, 2066], [254, 1524, 508, 762, 1016]], "paeks cost")
   #graph([[3.085184097290039,3.342437744140625,3.7395477294921875,3.848600387573242,3.9977550506591797],[0.8436203002929688,0.8484363555908203,0.8502960205078125,0.977325439453125,1.0920524597167969],[2.001333236694336,2.0662784576416016,2.2142887115478516,2.269601821899414,2.2292613983154297],[1.2380123138427734,1.0117530822753906,1.0188579559326172,1.0055065155029297,1.3580799102783203]], "hybrid time")
-  hybrid_data = perf_paeks('type3','BN254', 'hybrid time')
-  graph(hybrid_data, 'hybrid time')
-  graph(hybrid_data[1], "aes cost")
+  #hybrid_data = perf_paeks('type3','BN254', 'hybrid time')
+  #graph(hybrid_data, 'hybrid time')
+  #graph(hybrid_data[1], "aes cost")
   #graph([1648, 2616, 3624, 4632, 5640], "aes cost")
   #graph([256, 254, 1016, 1016], "hybrid cost")
-  #app.run(host="127.0.0.1", port=int(os.environ.get('PORT', 8080)), debug=True)
+  app.run(host="127.0.0.1", port=int(os.environ.get('PORT', 8080)), debug=True)
 
