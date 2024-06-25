@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', function() {
   else if(page == "search.html"){
     document.querySelector(".result_holder").style.display = "none";
     document.getElementById("view_container").style.display = "none";
+    $('#loading').hide();
   }
   else if(page == "profile.html"){
     $.ajax({
@@ -178,12 +179,6 @@ function change_pwd() {
     type: "POST",
     url: "/change_pwd",
     data: JSON.stringify(data),
-    /*beforeSend: function(){
-      $('#loading').show();
-    },
-    complete: function(){
-      $('#loading').hide();
-    },*/
     success: function(result) {
       if(result.status === "success"){
         hide_popup();
@@ -266,6 +261,12 @@ function search(){
     type: "POST",
     url: "/search",
     data: JSON.stringify(data),
+    beforeSend: function(){
+      $('#loading').show();
+    },
+    complete: function(){
+      $('#loading').hide();
+    },
     success: function(result) {
       if(result.status === "success"){
         let entries = Object.entries(result.data);      

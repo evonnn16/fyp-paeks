@@ -255,8 +255,8 @@ def insert():
     cw['A'] = adjust_hash_size(cw['A'], 254)
     cw_size = calc_size(cw['B'], 'g') + len(cw['A'])
     cw['B'] = paeks.paekstobyte(cw['B'])
-    print(f"paeks time taken: {paeks_time} ms")
-    print(f"cw size: {cw_size} bits")
+    #print(f"paeks time taken: {paeks_time} ms")
+    #print(f"cw size: {cw_size} bits")
     Cw.append(cw)
   #print(f"Cw: {Cw}")
   
@@ -266,9 +266,9 @@ def insert():
   Cm, aes_enc_time = aes_enc(paeks.paekstobyte(aes_key)[:32], eid, data)
   #print(f"aes key: {aes_key}")
   #print(f"aes encrypt: {Cm}")
-  print(f"aes enc time: {aes_enc_time} ms")
+  #print(f"aes enc time: {aes_enc_time} ms")
   cm_size = calc_size(Cm, 'Cm')
-  print(f"Cm size: {cm_size} bits")
+  #print(f"Cm size: {cm_size} bits")
   
   eg_pk = {'g': paeks.g1, 'y': paeks.pk_r}
   Ck, elgamal_enc_time = elgamal_enc(paeks.group, aes_key, eg_pk)
@@ -276,8 +276,8 @@ def insert():
   ck_size = calc_size(Ck['c1'], 'g') + calc_size(Ck['c2'], 'g')
   Ck['c1'] = paeks.paekstobyte(Ck['c1'])
   Ck['c2'] = paeks.paekstobyte(Ck['c2'])
-  print(f"elgamal enc time: {elgamal_enc_time} ms")
-  print(f"Ck size: {ck_size} bits")
+  #print(f"elgamal enc time: {elgamal_enc_time} ms")
+  #print(f"Ck size: {ck_size} bits")
   
   db.reference('emails/').child(r).child(s).child(eid).set({
     'key': Ck,
@@ -326,15 +326,15 @@ def search():
       for w in keyword:
         Tw, trapdoor_time = paeks.trapdoor(w)
         #print(f"trapdoor {w}: {Tw}")
-        print(f"trapdoor time taken: {trapdoor_time} ms")
+        #print(f"trapdoor time taken: {trapdoor_time} ms")
         tw_size = calc_size(Tw, 'g')
-        print(f"Tw size: {tw_size} bits")
+        #print(f"Tw size: {tw_size} bits")
         
         for e in emails[s]:
           for k in emails[s][e]['keyword']:
             if isinstance(k['B'], str): k['B'] = paeks.strtopaeks(k['B'])
             result, test_time = paeks.test(k,Tw)
-            print(f"test time taken: {test_time} ms")
+            #print(f"test time taken: {test_time} ms")
           
             if(result):
               if isinstance(emails[s][e]['key']['c1'], str): 
@@ -342,11 +342,11 @@ def search():
                 emails[s][e]['key']['c2'] = paeks.strtopaeks(emails[s][e]['key']['c2'])
               key, elgamal_dec_time = elgamal_dec(paeks.group, emails[s][e]['key'], paeks.sk_r)
               #print(f"dec aes key: {key}")
-              print(f"elgamal dec time: {elgamal_dec_time} ms")
+              #print(f"elgamal dec time: {elgamal_dec_time} ms")
               
               m, aes_dec_time = aes_dec(paeks.paekstobyte(key)[:32], emails[s][e]['ciphertext'])
               received_mails[e] = m
-              print(f"aes dec time: {aes_dec_time} ms")
+              #print(f"aes dec time: {aes_dec_time} ms")
               received_mails[e]["username"] = [users[i]['username'] for i in users if users[i]['email'] == received_mails[e]["from"]][0]
   
   #print(f"search result:{received_mails}")
