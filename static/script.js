@@ -18,7 +18,6 @@ document.addEventListener('DOMContentLoaded', function() {
       url: "/profile",
       data: JSON.stringify(localStorage.getItem('uid')),
       success: function(result) {
-        // console.log("result:"+result);
 	if(result.status === "success"){
           document.getElementById('from').value = result.email;
         }else alert("Error retrieving user email")
@@ -40,7 +39,6 @@ document.addEventListener('DOMContentLoaded', function() {
       url: "/profile",
       data: JSON.stringify(localStorage.getItem('uid')),
       success: function(result) {
-        // console.log("result:"+result);
 	if(result.status === "success"){
           document.getElementById('username').innerHTML = result.username;
           document.getElementById('email').innerHTML = result.email;
@@ -86,12 +84,6 @@ function register(){
     type: "POST",
     url: "/register",
     data: JSON.stringify(data),
-    /*beforeSend: function(){
-      $('#loading').show();
-    },
-    complete: function(){
-      $('#loading').hide();
-    },*/
     success: function(result) {
       if(result.status === "success"){
         window.location = "login.html";
@@ -119,7 +111,6 @@ function login(){
     "email": email,
     "pwd": pwd
   }];
-  // console.log(data);
 
   $.ajax({
     headers: { 
@@ -130,7 +121,6 @@ function login(){
     url: "/login",
     data: JSON.stringify(data),
     success: function(result) {
-      //console.log("server response:"+result);
       if(result.status === "success"){
         localStorage.setItem('uid', result.uid);
         window.location = "/";
@@ -219,7 +209,6 @@ function insert(){
     "content": content,
     "date": date
   }];
-  // console.log(data);
 
   $.ajax({
     headers: { 
@@ -275,9 +264,7 @@ function search(){
           const dateB = new Date(b[1].date);
           return dateB - dateA; // descending order
         });
-        //console.log(entries); //[[eid,obj],[eid,obj]]      
         result.data = Object.fromEntries(entries);
-        //console.log(result);
 	    
         var size = Object.keys(result.data).length;
         document.getElementById('no_result').innerHTML = size+" searching results";

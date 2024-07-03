@@ -89,13 +89,6 @@ body {
     margin-left: 10px;
 }
 
-/* .compose_form {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    width: 100vw;
-} */
-
 .compose_form td {
     color: #5e5e5e;
     font-size: 80%;
@@ -174,7 +167,6 @@ body {
 }
 
 .result_holder {
-    /*display: flex;*/
     justify-content: center;
     width: 80vw;
     padding: 0 20px;
@@ -385,7 +377,6 @@ body {
 }
 
 .login_container h1 {
-    /* color: #6551B3; */
     font-size: 200%;
     font-weight: 800;
     margin-bottom: 30px;
@@ -421,7 +412,6 @@ body {
 }
 
 #loading {
-    /*background: url('image/loading.gif') no-repeat center center;*/
     position: fixed;
     top: 0;
     left: 0;
