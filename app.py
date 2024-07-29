@@ -7,6 +7,7 @@ from Crypto.Cipher import AES
 import matplotlib.pyplot as plt
 import numpy as np 
 from datetime import datetime
+import argparse
 
 cred = credentials.Certificate("serviceAccountKey.json")
 firebase_admin.initialize_app(cred, {
@@ -326,108 +327,103 @@ def change_pwd():
 
 def perf_paeks(pairing_type, lamda, action):
   print(f"\n{pairing_type} {lamda} PAEKS running...")
-  global paeks
-  if action == "paeks":
-    group = PairingGroup(lamda)
-    
-    cnt = 100
-    avg_time = [0,0,0,0,0,0]
-    
-    for c in range(cnt):
-      start_time = time.time()
-      paeks = PAEKS(pairing_type, group)
-      end_time = time.time()
-      setup_time = (end_time - start_time) * 1000
-      
-      result, keygens_time = paeks.keygens()
-      
-      if(pairing_type == 'type1'): 
-        pks_size = calc_size(str(paeks.pk_s), 'g')
-      elif(pairing_type == 'type3'): 
-        pks_size = calc_size(str(paeks.pk_s1), 'g') + calc_size(str(paeks.pk_s2), 'g')
-      
-      result, keygenr_time = paeks.keygenr()
-      pkr_size = calc_size(str(paeks.pk_r), 'g')
-      sk_size = len(bin(int(str(paeks.sk_r))))-2
-      
-      keyword = "meeting"
-      
-      Cw, paeks_time = paeks.encrypt(keyword)
-      
-      if(pairing_type == 'type3'):
-        Cw['A'] = adjust_hash_size(Cw['A'], 254)
-      elif(pairing_type == 'type1'): 
-        Cw['A'] = adjust_hash_size(Cw['A'], 1024)
-      cw_size = calc_size(Cw['B'], 'g') + len(Cw['A'])
-      
-      Tw, trapdoor_time = paeks.trapdoor(keyword)
-      tw_size = calc_size(Tw, 'g')
-      
-      result, test_time = paeks.test(Cw, Tw)
-      
-      avg_time[0] += setup_time
-      avg_time[1] += keygens_time
-      avg_time[2] += keygenr_time
-      avg_time[3] += paeks_time
-      avg_time[4] += trapdoor_time
-      avg_time[5] += test_time
-      
-    for i in range(6):
-      avg_time[i] = avg_time[i] / cnt
-    
-    return avg_time
-    
-  elif action == "hybrid time":
-    eg_pk = {}
   
-    if(pairing_type == 'type1'):    
-      eg_pk['g'] = paeks.g
-    elif(pairing_type == 'type3'):    
-      eg_pk['g'] = paeks.g1
+  # PAEKS
+  group = PairingGroup(lamda)
+  
+  cnt = 200
+  avg_time = [0,0,0,0,0,0]
+  
+  for c in range(cnt):
+    start_time = time.time()
+    paeks = PAEKS(pairing_type, group)
+    end_time = time.time()
+    setup_time = (end_time - start_time) * 1000
+    
+    result, keygens_time = paeks.keygens()
+    
+    if(pairing_type == 'type1'): 
+      pks_size = calc_size(str(paeks.pk_s), 'g')
+    elif(pairing_type == 'type3'): 
+      pks_size = calc_size(str(paeks.pk_s1), 'g') + calc_size(str(paeks.pk_s2), 'g')
+    
+    result, keygenr_time = paeks.keygenr()
+    pkr_size = calc_size(str(paeks.pk_r), 'g')
+    sk_size = len(bin(int(str(paeks.sk_r))))-2
+    
+    keyword = "meeting"
+    
+    Cw, paeks_time = paeks.encrypt(keyword)
+    
+    if(pairing_type == 'type3'):
+      Cw['A'] = adjust_hash_size(Cw['A'], 254)
+    elif(pairing_type == 'type1'): 
+      Cw['A'] = adjust_hash_size(Cw['A'], 1024)
+    cw_size = calc_size(Cw['B'], 'g') + len(Cw['A'])
+    
+    Tw, trapdoor_time = paeks.trapdoor(keyword)
+    tw_size = calc_size(Tw, 'g')
+    
+    result, test_time = paeks.test(Cw, Tw)
+    
+    avg_time[0] += setup_time
+    avg_time[1] += keygens_time
+    avg_time[2] += keygenr_time
+    avg_time[3] += paeks_time
+    avg_time[4] += trapdoor_time
+    avg_time[5] += test_time
+    
+  for i in range(6):
+    avg_time[i] = avg_time[i] / cnt
+  
+  # Hybrid ElGamal+AES-GCM
+  eg_pk = {}
+  
+  if(pairing_type == 'type1'):    
+    eg_pk['g'] = paeks.g
+  elif(pairing_type == 'type3'):    
+    eg_pk['g'] = paeks.g1
+  eg_pk['y'] = paeks.pk_r
+  
+  all_algo = [[],[],[],[]]
+  comm_cost = [[],[]]
+  
+  for s in range(1,6): 
+    hybrid_avg_time = [0,0,0,0]
+    for c in range(cnt): 
+      eid = str(uuid.uuid4())
+      data = [{"from":"alice@paeks.mai.com","to":"bob@paeks.mai.com","subject":"fyp meet urgent","content":"Bob, \nLet's meet on tomorrow at 10am in learning point to discuss about the FYP, because the deadline is around the corner\n"*s*100,"date":"2024-01-01 13:00:00"}]
+      m_size = calc_size(data, 'm')/8/1000
+      aes_key = paeks.group.random(G1)
+      Cm, aes_enc_time = aes_enc(paeks.paekstobyte(aes_key)[:32], eid, data)
+      cm_size = calc_size(Cm, 'Cm')/8/1000
       
-    #fixed alice sender, bob receiver  
-    users = db.reference('users/').get()
-    paeks.sk_r = paeks.strtopaeks(users["18b7f8d3-7d2a-4808-ba34-ac87fb9ffb3f"]["sk_r"])
-    paeks.pk_r = paeks.strtopaeks(users["18b7f8d3-7d2a-4808-ba34-ac87fb9ffb3f"]["pk_r"])
-    eg_pk['y'] = paeks.pk_r
-    
-    all_algo = [[],[],[],[]]
-    cnt = 200 #calculate avg of how many times
-    comm_cost = [[],[]] #email size, cm size
-    
-    for s in range(1,6): #msg in 100-500
-      avg_time = [0,0,0,0]
-      for c in range(cnt): #run for 200 times to calc avg
-        eid = str(uuid.uuid4())
-        data = [{"from":"alice@paeks.mai.com","to":"bob@paeks.mai.com","subject":"fyp meet urgent","content":"Bob, \nLet's meet on tomorrow at 10am in learning point to discuss about the FYP, because the deadline is around the corner\n"*s*100,"date":"2024-01-01 13:00:00"}]
-        m_size = calc_size(data, 'm')/8/1000
-        aes_key = paeks.group.random(G1)
-        Cm, aes_enc_time = aes_enc(paeks.paekstobyte(aes_key)[:32], eid, data)
-        cm_size = calc_size(Cm, 'Cm')/8/1000
-        
-        if c == 0:
-          comm_cost[0].append(m_size)
-          comm_cost[1].append(cm_size)
+      if c == 0:
+        comm_cost[0].append(m_size)
+        comm_cost[1].append(cm_size)
   
-        Ck, elgamal_enc_time = elgamal_enc(paeks.group, aes_key, eg_pk)
-        ck_size = calc_size(Ck['c1'], 'g') + calc_size(Ck['c2'], 'g')
-        eg_pk_size = calc_size(eg_pk['g'], 'g') + calc_size(eg_pk['y'], 'g')
+      Ck, elgamal_enc_time = elgamal_enc(paeks.group, aes_key, eg_pk)
+      ck_size = calc_size(Ck['c1'], 'g') + calc_size(Ck['c2'], 'g')
+      eg_pk_size = calc_size(eg_pk['g'], 'g') + calc_size(eg_pk['y'], 'g')
   
-        key, elgamal_dec_time = elgamal_dec(paeks.group, Ck, paeks.sk_r)
-        
-        m, aes_dec_time = aes_dec(paeks.paekstobyte(key)[:32], Cm)
-        avg_time[0] += aes_enc_time
-        avg_time[1] += aes_dec_time
-        avg_time[2] += elgamal_enc_time
-        avg_time[3] += elgamal_dec_time
-      for i in range(4):
-        avg_time[i] = avg_time[i] / cnt
-    
-      all_algo[0].append(avg_time[0])
-      all_algo[1].append(avg_time[1])
-      all_algo[2].append(avg_time[2])
-      all_algo[3].append(avg_time[3])
-    return all_algo, comm_cost
+      key, elgamal_dec_time = elgamal_dec(paeks.group, Ck, paeks.sk_r)
+      
+      m, aes_dec_time = aes_dec(paeks.paekstobyte(key)[:32], Cm)
+      hybrid_avg_time[0] += aes_enc_time
+      hybrid_avg_time[1] += aes_dec_time
+      hybrid_avg_time[2] += elgamal_enc_time
+      hybrid_avg_time[3] += elgamal_dec_time
+      
+    for i in range(4):
+      hybrid_avg_time[i] = hybrid_avg_time[i] / cnt
+  
+    all_algo[0].append(hybrid_avg_time[0])
+    all_algo[1].append(hybrid_avg_time[1])
+    all_algo[2].append(hybrid_avg_time[2])
+    all_algo[3].append(hybrid_avg_time[3])
+  
+  return avg_time, all_algo, comm_cost
+
 
 def graph(data, perf):
   plt.figure(num="PAEKS Performance Analysis")
@@ -498,6 +494,7 @@ def graph(data, perf):
       plt.text(i-0.1,data[i], f"{data[i]}")
     plt.show()
 
+
 #Initialise global parameters
 group = PairingGroup('BN254')
 paeks = PAEKS('type3', group)
@@ -510,18 +507,29 @@ else:
   paeks.g2 = paeks.strtopaeks(params['g2'])
   paeks.u = paeks.strtopaeks(params['u'])
 
-if __name__ == "__main__":
-  #Performance benchmarking
-  #type1 = perf_paeks('type1','SS1024', 'paeks')
-  #type3 = perf_paeks('type3','BN254', 'paeks')
-  #graph([type1, type3], "paeks time")
-  #graph([[1024, 2066, 2066, 3090, 2066], [254, 1524, 508, 762, 1016]], "paeks cost")
+
+def benchmark_performance():
+  type1 = perf_paeks('type1','SS1024', 'paeks')
+  type3 = perf_paeks('type3','BN254', 'paeks')
+  graph([type1[0], type3[0]], "paeks time")
+  graph([[1024, 2066, 2066, 3090, 2066], [254, 1524, 508, 762, 1016]], "paeks cost")
+  graph([type3[1], type3[2]], 'hybrid time')  
+  graph(type3[2], "aes cost")
+  graph([256, 254, 1016, 1016], "hybrid cost")
   
-  #hybrid_data = perf_paeks('type3','BN254', 'hybrid time')
-  #graph(hybrid_data, 'hybrid time')
-  #graph(hybrid_data[1], "aes cost")
-  #graph([256, 254, 1016, 1016], "hybrid cost")
-  
-  #Website hosting
-  app.run(host="127.0.0.1", port=int(os.environ.get('PORT', 8080)), debug=True)
+
+if __name__ == "__main__":  
+  parser = argparse.ArgumentParser(description="Run the web application or performance benchmarking.")
+  parser.add_argument(
+    "mode",
+    choices=["w", "b"],
+    help="Mode to run the application: 'w' for web application, 'b' for performance benchmarking",
+  )
+
+  args = parser.parse_args()
+
+  if args.mode == "w":
+    app.run(host="127.0.0.1", port=int(os.environ.get('PORT', 8080)), debug=True)
+  elif args.mode == "b":
+    benchmark_performance()
 
