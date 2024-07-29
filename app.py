@@ -330,7 +330,7 @@ def perf_paeks(pairing_type, lamda, action):
   if action == "paeks":
     group = PairingGroup(lamda)
     
-    cnt = 10
+    cnt = 100
     avg_time = [0,0,0,0,0,0]
     
     for c in range(cnt):
@@ -360,9 +360,7 @@ def perf_paeks(pairing_type, lamda, action):
         Cw['A'] = adjust_hash_size(Cw['A'], 1024)
       cw_size = calc_size(Cw['B'], 'g') + len(Cw['A'])
       
-      skeyword = "meeting"
-      
-      Tw, trapdoor_time = paeks.trapdoor(skeyword)
+      Tw, trapdoor_time = paeks.trapdoor(keyword)
       tw_size = calc_size(Tw, 'g')
       
       result, test_time = paeks.test(Cw, Tw)
