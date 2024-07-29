@@ -18,4 +18,5 @@
 - Charm-Crypto (https://github.com/JHUISI/charm)
 
 ## Usage
-To run the project, use the command: `python app.py`
+To run the web application, use the command: `python app.py w`  
+To run performance benchmarking, use the command: `python app.py b`
